@@ -1,6 +1,6 @@
 from sqlalchemy import Table, ForeignKey, Column
 from sqlalchemy.dialects.mysql import DOUBLE, TINYINT
-from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Unicode
+from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Unicode, String
 
 # declarative_base instance used for TurboGears integration
 from sqlalchemy.ext.declarative import declarative_base
@@ -10,8 +10,10 @@ DeclarativeBasePlasmid = declarative_base()
 class DBConstants(DeclarativeBasePlasmid):
     __tablename__ = 'DBConstants'
 
-    Parameter = Column(Unicode(256, collation="utf8_bin"), nullable=False, primary_key=True)
+    Parameter = Column(Unicode(256, collation = "utf8_bin"), nullable = False, primary_key = True)
+    ParameterType = Column(Unicode(256, collation = "utf8_bin"), nullable = True)
     Value = Column(Text(collation="utf8_bin"), nullable=False)
+    ValueType = Column(Enum('Int','String','Float', 'BLOB', 'Timestamp'), nullable = False)
 
 
 class Primers(DeclarativeBasePlasmid):

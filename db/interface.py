@@ -8,7 +8,7 @@ from klab.fs.fsio import read_file
 from klab.db.sqlalchemy_interface import get_or_create_in_transaction
 
 import model
-from model import declarative_base
+from model import declarative_base, DBConstants
 
 
 class DatabaseInterface(object):
@@ -93,6 +93,17 @@ class DatabaseInterface(object):
 
     def renew(self, utf = False):
         self.session = self.get_session(new_session = True, utf = utf)
+
+
+    #############################
+    #                           #
+    #  Data retrieval           #
+    #                           #
+    #############################
+
+
+    def get_admin_contacts(self):
+        return [r.Value for r in self.get_session().query(DBConstants).filter(DBConstants.ParameterType == u'admin_contact').order_by(DBConstants.Parameter)]
 
 
 # Example transaction code for cassette plasmid insertion
