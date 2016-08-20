@@ -7,6 +7,13 @@ from sqlalchemy.ext.declarative import declarative_base
 DeclarativeBasePlasmid = declarative_base()
 
 
+class DBConstants(DeclarativeBasePlasmid):
+    __tablename__ = 'DBConstants'
+
+    Parameter = Column(Unicode(256, collation="utf8_bin"), nullable=False, primary_key=True)
+    Value = Column(Text(collation="utf8_bin"), nullable=False)
+
+
 class Primers(DeclarativeBasePlasmid):
     __tablename__ = 'Primers'
 
@@ -33,7 +40,12 @@ class Primers(DeclarativeBasePlasmid):
         plength = self.length or ''
         if plength:
             plength = ', {0}'.format(plength)
-        s = 'Primer o{0}{1:04d} ({2}): {3}, {6}C, {7}{8} \n  Sequence: {4}{5}'.format(self.creator, self.creator_entry_number, self.secondary_id,
+        if self.creator_entry_number:
+            # This is added on database insertion so will not be filled in for transient objects
+            s = 'Primer o{0}{1:04d} ({2}): {3}, {6}C, {7}{8} \n  Sequence: {4}{5}'.format(self.creator, self.creator_entry_number, self.secondary_id,
+                                                                    self.direction, self.sequence, description, self.TM, self.date, GC, plength)
+        else:
+            s = 'Primer o{0} ({2}): {3}, {6}C, {7}{8} \n  Sequence: {4}{5}'.format(self.creator, None, self.secondary_id,
                                                                     self.direction, self.sequence, description, self.TM, self.date, GC, plength)
         if self.template_id:
             s += '\n  Template #: {0}'.format(self.template_id)
