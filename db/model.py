@@ -72,7 +72,7 @@ class Users(DeclarativeBasePlasmid):
 
 # TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
-    import from sqlalchemy.sql.sqltypes import LargeBinary
+    from sqlalchemy.sql.sqltypes import LargeBinary
     __tablename__ = 'Plasmid'
     creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
