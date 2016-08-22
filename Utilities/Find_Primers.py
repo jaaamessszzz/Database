@@ -4,7 +4,7 @@ sys.path.insert(0, '..')
 
 from db import model
 from db.interface import DatabaseInterface
-from db.model import DBConstants, Primers, Users, Plasmid
+from db.model import Users, Plasmid
 
 def main():
     # Create up the database session
@@ -18,8 +18,13 @@ def main():
 
     target_sequence = 'ATCAACAACGAGCAGGTCTC'
     plasmid_sequences = tsession.query(Plasmid.plasmid_name, Plasmid.sequence)
+
     for name, sequence in plasmid_sequences:
         print (name, sequence)
+
+    if target_sequence in sequence:
+        print 'Found it!'
+        print name
 
 if __name__ == '__main__':
     main()
