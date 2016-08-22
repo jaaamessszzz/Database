@@ -69,3 +69,19 @@ class Users(DeclarativeBasePlasmid):
     github_username = Column(Unicode(26, collation="utf8_bin"), nullable=False)
     lab_username = Column(Unicode(50, collation="utf8_bin"), nullable = False)
     color = Column(Unicode(6, collation="utf8_bin"), nullable = False)
+
+# TEMP for testing Find_Primers.py
+class Plasmid(DeclarativeBasePlasmid):
+    from sqlalchemy.sql.sqltypes import LargeBinary
+    __tablename__ = 'Plasmid'
+    creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
+    creator_entry_number = Column(Integer, nullable=False, primary_key=True)
+    plasmid_name = Column(Unicode(100, collation="utf8_bin"), nullable=True, unique=True)
+    plasmid_type = Column(Enum("part","cassette","multicassette","other"), nullable=False)
+    location = Column(Unicode(250, collation="utf8_bin"), nullable=False)
+    description = Column(Text(), nullable=False)
+    sequence = Column(Text(), nullable=False)
+    ape_file = Column(LargeBinary(), nullable=True)
+    status = Column(Enum("designed","verified","abandoned"), nullable=False)
+    date = Column(TIMESTAMP, nullable=False)
+
