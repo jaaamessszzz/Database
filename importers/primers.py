@@ -89,7 +89,7 @@ def main():
     colortext.message('\nPrimers import script')
     colortext.pcyan('Database admin contacts: {0}'.format(', '.join(dbi.get_admin_contacts())))
     colortext.warning('Registered users: {0}\n'.format(', '.join(   ['{0} ({1})'.format(v, k) for k, v in sorted(user_map.iteritems(), key = lambda x: x[1])])))
-    
+
     errors = []
     import_path = tsession.query(DBConstants).filter(DBConstants.Parameter == u'import_path').one().Value
     import_path_folders = sorted([d for d in os.listdir(import_path) if os.path.isdir(os.path.join(import_path,d))])
