@@ -1,5 +1,6 @@
 import os
 import sys
+import pprint
 sys.path.insert(0, '..')
 
 from db import model
@@ -20,11 +21,12 @@ class Plasmid_Utilities:
         target_sequence = 'ATCAACAACGAGCAGGTCTC'
         plasmid_sequences = tsession.query(Plasmid.plasmid_name, Plasmid.sequence)
 
+        pprint.pprint(plasmid_sequences)
+
         for name, sequence in plasmid_sequences:
-            print (name, sequence)
+            print name
 
             if target_sequence in sequence:
-                print 'Found it!'
-                print name
+                print 'Target sequence was found in %s' %name
 
 Plasmid_Utilities.primer_match()
