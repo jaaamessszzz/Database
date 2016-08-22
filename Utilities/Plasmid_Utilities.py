@@ -13,7 +13,7 @@ class Plasmid_Utilities:
     def __init__(self):
         asdf = 'asdf'
 
-    def reverse_compliment(self, input_sequence):
+    def reverse_complement(self, input_sequence):
         base_pair = {'A': 'T',
                      'T': 'A',
                      'C': 'G',
@@ -33,11 +33,11 @@ class Plasmid_Utilities:
 
         plasmid_sequences = tsession.query(Plasmid.plasmid_name, Plasmid.sequence)
 
-        target_reverse_compliment = self.reverse_compliment(target_sequence)
+        target_reverse_complement = self.reverse_complement(target_sequence)
 
         for name, sequence in plasmid_sequences:
             print name
             if target_sequence in sequence:
                 print 'Target sequence (F) was found in %s' % name
-            if target_reverse_compliment in sequence:
+            if target_reverse_complement in sequence:
                 print 'Target sequence (R) was found in %s' % name
