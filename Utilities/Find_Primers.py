@@ -11,7 +11,7 @@ class Plasmid_Utilities(object):
     def __init__(self):
         asdf = 'asdf'
 
-    def primer_match():
+    def primer_match(self):
         # Create up the database session
         dbi = DatabaseInterface()
         tsession = dbi.get_session()
