@@ -7,7 +7,7 @@ from db import model
 from db.interface import DatabaseInterface
 from db.model import Users, Plasmid
 
-class Plasmid_Utilities(object):
+class Plasmid_Utilities:
     def __init__(self):
         asdf = 'asdf'
 
