@@ -8,7 +8,10 @@ from db.interface import DatabaseInterface
 from db.model import Users, Plasmid
 
 class Plasmid_Utilities:
-    def primer_match():
+    def __init__(self):
+        asdf = 'asdf'
+
+    def primer_match(self):
         # Create up the database session
         dbi = DatabaseInterface()
         tsession = dbi.get_session()
