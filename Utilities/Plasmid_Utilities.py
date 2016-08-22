@@ -9,7 +9,7 @@ from db.interface import DatabaseInterface
 from db.model import Users, Plasmid
 
 
-class Plasmid_Utilities:
+class Plasmid_Utilities(object):
     def __init__(self):
         asdf = 'asdf'
 
@@ -19,7 +19,7 @@ class Plasmid_Utilities:
                      'C': 'G',
                      'G': 'C'
                      }
-        return reversed(''.join([base_pair[base] for base in input_sequence]))
+        return ''.join(reversed([base_pair[base] for base in input_sequence]))
 
     def primer_match(self, target_sequence):
         # Create up the database session
