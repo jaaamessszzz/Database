@@ -6,25 +6,25 @@ from db import model
 from db.interface import DatabaseInterface
 from db.model import Users, Plasmid
 
-def main():
-    # Create up the database session
-    dbi = DatabaseInterface()
-    tsession = dbi.get_session()
+class Plasmid_Utilities:
+    def primer_match():
+        # Create up the database session
+        dbi = DatabaseInterface()
+        tsession = dbi.get_session()
 
-    # Create a map from usernames to the database IDs (typically initials)
-    user_map = {}
-    for u in tsession.query(Users):
-        user_map[u.lab_username] = u.ID
+        # Create a map from usernames to the database IDs (typically initials)
+        user_map = {}
+        for u in tsession.query(Users):
+            user_map[u.lab_username] = u.ID
 
-    target_sequence = 'ATCAACAACGAGCAGGTCTC'
-    plasmid_sequences = tsession.query(Plasmid.plasmid_name, Plasmid.sequence)
+        target_sequence = 'ATCAACAACGAGCAGGTCTC'
+        plasmid_sequences = tsession.query(Plasmid.plasmid_name, Plasmid.sequence)
 
-    for name, sequence in plasmid_sequences:
-        print (name, sequence)
+        for name, sequence in plasmid_sequences:
+            print (name, sequence)
 
-    if target_sequence in sequence:
-        print 'Found it!'
-        print name
+            if target_sequence in sequence:
+                print 'Found it!'
+                print name
 
-if __name__ == '__main__':
-    main()
+Plasmid_Utilities.primer_match()
