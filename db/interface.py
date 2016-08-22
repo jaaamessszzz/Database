@@ -1,11 +1,12 @@
 import os
 import json
+import pprint
 
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine, and_
 
 from klab.fs.fsio import read_file
-from klab.db.sqlalchemy_interface import get_or_create_in_transaction
+from klab.db.sqlalchemy_interface import get_or_create_in_transaction, MySQLSchemaConverter
 
 import model
 from model import declarative_base, DBConstants
@@ -18,6 +19,7 @@ class DatabaseInterface(object):
         # Read config
         config_file = os.path.expanduser('~/.my.cnf.json')
         config = json.loads(read_file(config_file))
+        self.config = config
         self.echo_sql = echo_sql
 
         # Set up SQLAlchemy connections
@@ -143,4 +145,8 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    dbi = DatabaseInterface()
+    config = dbi.config['plasmids']
+    pprint.pprint(config)
+    sc = MySQLSchemaConverter(config['user'], config['host'], config['database'], config['password'], config['port'], config['socket'])
+    sc.get_sqlalchemy_schema()
