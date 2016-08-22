@@ -11,7 +11,7 @@ class Plasmid_Utilities(object):
     def __init__(self):
         asdf = 'asdf'
 
-    def primer_match(self):
+    def primer_match():
         # Create up the database session
         dbi = DatabaseInterface()
         tsession = dbi.get_session()
@@ -32,4 +32,4 @@ class Plasmid_Utilities(object):
             if target_sequence in sequence:
                 print 'Target sequence was found in %s' %name
 
-Plasmid_Utilities.primer_match(self)
+Plasmid_Utilities.primer_match()
