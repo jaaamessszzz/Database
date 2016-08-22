@@ -7,7 +7,7 @@ from db import model
 from db.interface import DatabaseInterface
 from db.model import Users, Plasmid
 
-class Plasmid_Utilities:
+class Plasmid_Utilities(object):
     def __init__(self):
         asdf = 'asdf'
 
@@ -32,4 +32,4 @@ class Plasmid_Utilities:
             if target_sequence in sequence:
                 print 'Target sequence was found in %s' %name
 
-Plasmid_Utilities.primer_match()
+Plasmid_Utilities.primer_match(self)
