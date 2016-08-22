@@ -1,18 +1,27 @@
 import os
 import sys
 import pprint
+
 sys.path.insert(0, '..')
 
 from db import model
 from db.interface import DatabaseInterface
 from db.model import Users, Plasmid
 
+
 class Plasmid_Utilities:
     def __init__(self):
         asdf = 'asdf'
 
-    @staticmethod
-    def primer_match():
+    def reverse_compliment(self, input_sequence):
+        base_pair = {'A': 'T',
+                     'T': 'A',
+                     'C': 'G',
+                     'G': 'C'
+                     }
+        return reversed(''.join([base_pair[base] for base in input_sequence]))
+
+    def primer_match(self, target_sequence):
         # Create up the database session
         dbi = DatabaseInterface()
         tsession = dbi.get_session()
@@ -22,15 +31,13 @@ class Plasmid_Utilities:
         for u in tsession.query(Users):
             user_map[u.lab_username] = u.ID
 
-        target_sequence = 'ATCAACAACGAGCAGGTCTC'
         plasmid_sequences = tsession.query(Plasmid.plasmid_name, Plasmid.sequence)
 
-        pprint.pprint(plasmid_sequences)
+        target_reverse_compliment = self.reverse_compliment(target_sequence)
 
         for name, sequence in plasmid_sequences:
             print name
-
             if target_sequence in sequence:
-                print 'Target sequence was found in %s' %name
-
-Plasmid_Utilities.primer_match()
+                print 'Target sequence (F) was found in %s' % name
+            if target_reverse_compliment in sequence:
+                print 'Target sequence (R) was found in %s' % name
