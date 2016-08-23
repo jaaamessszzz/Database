@@ -134,9 +134,9 @@ class Cassette_Assembly(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Assembly'
 
     Cassette_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    Cassette_creator = Column(Unicode(5), nullable=False, primary_key=True)
+    Cassette_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     Part_number = Column(String(2), nullable=False, primary_key=True)
-    Part_creator = Column(Unicode(5), nullable=False)
+    Part_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
     Part_creator_entry_number = Column(Integer, nullable=False)
 
 
@@ -144,7 +144,7 @@ class Cassette_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Plasmid'
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    creator = Column(Unicode(5), nullable=False, primary_key=True)
+    creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     left_connector = Column(Integer, nullable=True)
     right_connector = Column(Integer, nullable=True)
 
@@ -152,16 +152,16 @@ class Cassette_Plasmid(DeclarativeBasePlasmid):
 class Feature(DeclarativeBasePlasmid):
     __tablename__ = 'Feature'
 
-    Feature_name = Column(Unicode(200), nullable=False, primary_key=True)
+    Feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False, primary_key=True)
     MD5_hash = Column(String(64), nullable=True)
-    Feature_type = Column(Unicode(200), nullable=False)
+    Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False)
     Feature_sequence = Column(Text, nullable=True)
 
 
 class Feature_Type(DeclarativeBasePlasmid):
     __tablename__ = 'Feature_Type'
 
-    Feature_type = Column(Unicode(200), nullable=False, primary_key=True)
+    Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False, primary_key=True)
 
 
 class Left_Cassette_Connector(DeclarativeBasePlasmid):
@@ -175,26 +175,26 @@ class Multicassette_Assembly(DeclarativeBasePlasmid):
     __tablename__ = 'Multicassette_Assembly'
 
     Multicassette_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    Multicassette_creator = Column(Unicode(5), nullable=False, primary_key=True)
+    Multicassette_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     Left_connector = Column(Integer, nullable=False, primary_key=True)
     Right_connector = Column(Integer, nullable=False, primary_key=True)
     Cassette_creator_entry_number = Column(Integer, nullable=False)
-    Cassette_creator = Column(Unicode(5), nullable=False)
+    Cassette_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
 
 
 class Multicassette_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Multicassette_Plasmid'
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    creator = Column(Unicode(5), nullable=False, primary_key=True)
+    creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     resistance = Column(Unicode(100), nullable=False)
-    Origin = Column(Unicode(100), nullable=False)
+    Origin = Column(Unicode(100, collation="utf8_bin"), nullable=False)
 
 
 class Origin(DeclarativeBasePlasmid):
     __tablename__ = 'Origin'
 
-    Origin = Column(Unicode(100), nullable=False, primary_key=True)
+    Origin = Column(Unicode(100, collation="utf8_bin"), nullable=False, primary_key=True)
 
 
 class Part_Plasmid(DeclarativeBasePlasmid):
@@ -202,14 +202,14 @@ class Part_Plasmid(DeclarativeBasePlasmid):
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     creator = Column(Unicode(5), nullable=False, primary_key=True)
-    resistance = Column(Unicode(100), nullable=False)
+    resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False)
 
 
 class Part_Plasmid_Part(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid_Part'
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    creator = Column(Unicode(5), nullable=False, primary_key=True)
+    creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     part_number = Column(String(4), nullable=False, primary_key=True)
 
 
@@ -226,8 +226,8 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
 
     ID = Column(Integer, nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, nullable=False)
-    creator = Column(Unicode(5), nullable=False)
-    feature_name = Column(Unicode(200), nullable=False)
+    creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
+    feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False)
 
 
 class Right_Cassette_Connector(DeclarativeBasePlasmid):
