@@ -2,6 +2,10 @@ import os
 import json
 import pprint
 
+import smtplib
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine, and_
 
@@ -14,13 +18,14 @@ from model import declarative_base, DBConstants
 
 class DatabaseInterface(object):
 
-    def __init__(self, echo_sql = False):
+    def __init__(self, echo_sql = False, can_email = True):
 
         # Read config
         config_file = os.path.expanduser('~/.my.cnf.json')
         config = json.loads(read_file(config_file))
         self.config = config
         self.echo_sql = echo_sql
+        self.can_email = can_email
 
         # Set up SQLAlchemy connections
         try:
@@ -107,6 +112,34 @@ class DatabaseInterface(object):
     def get_admin_contacts(self):
         return [r.Value for r in self.get_session().query(DBConstants).filter(DBConstants.ParameterType == u'admin_contact').order_by(DBConstants.Parameter)]
 
+
+    #############################
+    #                           #
+    #  Admin                    #
+    #                           #
+    #############################
+
+
+    def email_plasdmins(self, subject, htmltext, plaintext):
+        if self.can_email:
+            recipients = ['shane.oconnor@ucsf.edu']
+            if recipients:
+                recipients = sorted(set(recipients))
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = subject
+                msg['From'] = 'support@kortemmelab.ucsf'
+                msg['To'] = ';'.join(recipients)
+                msg['Reply-To'] = 'support@kortemmelab.ucsf'
+
+                part1 = MIMEText(plaintext, 'plain', "utf-8")
+                part2 = MIMEText(htmltext, 'html', "utf-8")
+                msg.attach(part1)
+                msg.attach(part2)
+
+                s = smtplib.SMTP()
+                s.connect()
+                s.sendmail(msg['From'], recipients, msg.as_string())
+                s.close()
 
 # Example transaction code for cassette plasmid insertion
 #

@@ -1,3 +1,13 @@
+#!/usr/bin/python2.4
+# encoding: utf-8
+"""
+primers.py
+
+A script to automatically add primers to the Plasmids database from TSV files in user directories.
+
+Created by Shane O'Connor 2016.
+"""
+
 import os
 import sys
 import pprint
@@ -16,68 +26,63 @@ from db.interface import DatabaseInterface
 from db.model import DBConstants, Primers, Users
 
 
-def parse(primers_file, user_id, errors = []):
-    print(primers_file)
-    #tsession = dbi.get_session(new_session = True)
+def parse(dbi, primers_file, user_id, errors = []):
 
     # Import data
-    df = pd.read_csv(primers_file, delimiter='\t')
-    colortext.warning(str(df))
-
-
-    required_fields = ['sequence', 'direction', 'description', 'template_id']
-    optional_fields = ['secondary_id', 'TM', 'GC', 'length', 'template_description']
-    derived_or_generated_fields = ['creator', 'creator_entry_number', 'date']
-    float_fields = ['TM', 'GC', 'length']
+    df = pd.read_csv(primers_file, delimiter = '\t', encoding = 'utf-8')
 
     # Parse and add to model
-    errors = []
-    print(df.columns.values)
-    for f in required_fields:
+    lcase_columns = [cn.lower() for cn in df.columns.values]
+    for f in Primers._required_fields:
         if f not in df.columns.values:
-            errors.append('Missing required field {0} in {1}.'.format(f, primers_file))
-    for f in derived_or_generated_fields:
-        if f in df.columns.values:
-            errors.append('Found derived field {0} in {1}. Since these values are derived during import into the database, storing them explicitly in the file could lead to inconsistencies.'.format(f, primers_file))
+            errors.append('Missing required field "{0}" in {1}.'.format(f, primers_file))
+    for f in Primers._derived_or_generated_fields:
+        if f in df.columns.values or f.lower() in lcase_columns:
+            errors.append('Found derived field "{0}" in {1}. Since these values are derived during import into the database, storing them explicitly in the file could lead to inconsistencies.'.format(f, primers_file))
 
     if errors:
-        raise Exception('Failed to parse the TSV file.')
+        raise Exception('Failed to parse the TSV file {0}'.format(primers_file))
 
-    # Set up derived fields. creator_entry_number is created automatically by a database trigger upon import
+    # Create empty dataframes used to store the successfully imported records and failed records respectively
+    pass_df, fail_df = pd.DataFrame(columns = df.columns.values), pd.DataFrame(columns = df.columns.values)
 
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     for index, row in df.iterrows():
 
+        # Set up derived fields. creator_entry_number is created automatically by a database trigger upon import
         d = dict(
             creator = user_id,
             date = timestamp,
         )
+        for header in Primers._required_fields + Primers._optional_fields:
+            d[header] = row.get(header, None)
 
-        for header in required_fields:
-            d[header] = row[header]
-        for header in optional_fields:
-            if header in row:
-                d[header] = row[header]
-            else:
-                d[header] = None
-        for header in float_fields:
-            if d[header] != None:
-                d[header] = float(d[header])
+        # Use a new transaction per row (we could relax this)
+        tsession = dbi.get_session(new_session = True)
 
-        colortext.pcyan('Adding this record:')
-        pprint.pprint(d)
+        try:
+            Primers.add(tsession, d)
+            tsession.commit()
+            tsession.close()
+            pass_df = pass_df.append(row, ignore_index = True)
+        except Exception, e:
+            errors.append('Error: {0} on record {1}'.format(str(e), str(d)))
+            fail_df = fail_df.append(row, ignore_index = True)
+            tsession.rollback()
+            tsession.close()
 
-        db_record_object = Primers(**d)
+    dt = datetime.datetime.now()
+    archive_file_path = os.path.join(os.path.split(primers_file)[0], '.' + os.path.splitext(os.path.split(primers_file)[1])[0] + '.{0}.archive.tsv'.format(dt.strftime('%Y%m%d_%H%M_%S_%f')))
 
-        colortext.warning('String representation:')
-        print(db_record_object)
-        print('')
+    pass_df.to_csv(archive_file_path, sep = '\t', header = True, index = False)
+    fail_df.to_csv(primers_file, sep = '\t', header = True, index = False)
+
 
 
 def main():
 
     # Create up the database session
-    dbi = DatabaseInterface()
+    dbi = DatabaseInterface(can_email = True)
     tsession = dbi.get_session()
 
     # Create a map from usernames to the database IDs (typically initials)
@@ -99,14 +104,20 @@ def main():
             user_id = user_map[ipf]
             primers_file = os.path.join(user_folder, 'primers.tsv')
             if os.path.exists(primers_file):
+                case_errors = []
                 try:
-                    parse(primers_file, user_id, errors)
+                    parse(dbi, primers_file, user_id, case_errors)
+                    if case_errors:
+                        errors.append("Errors occurred processing '{0}':\n\t{1}".format(primers_file, '\n\t'.join(case_errors)))
+                        colortext.warning(errors[-1])
                 except Exception, e:
+                    errors.append("Errors occurred processing '{0}': {1}\n\t{2}\n{3}".format(primers_file, str(e), '\n\t'.join(case_errors), traceback.format_exc()))
                     colortext.warning('Error: {0}\n{1}'.format(str(e), traceback.format_exc()))
 
     if errors:
-        pass
-        # todo: email the plasdmins
+        colortext.warning('\n\n'.join(errors))
+        dbi.email_plasdmins('Automatic parsing of primers failed.', '<br/><br/>'.join([m.replace('\n', '<br/>') for m in errors]), '\n\n'.join(errors))
+
 
 
 if __name__ == '__main__':
