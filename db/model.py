@@ -25,12 +25,18 @@ class Primers(DeclarativeBasePlasmid):
     sequence = Column(Unicode(256, collation="utf8_bin"), nullable = False)
     direction = Column(Enum('F','R'), nullable=False)
     description = Column(Text(collation="utf8_bin"), nullable=False)
-    TM = Column(Float, nullable=False)
+    TM = Column(Integer, nullable=False)
     date = Column(TIMESTAMP, nullable=False)
     GC = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
     template_id = Column(Unicode(200, collation="utf8_bin"), nullable = True)
     template_description = Column(Unicode(200, collation="utf8_bin"), nullable = True)
+
+
+    def commit(self, tsession):
+        #if tsession == None then create new session
+        pass
+
 
     def __repr__(self):
         description = self.description or ''
