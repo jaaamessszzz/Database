@@ -1,3 +1,7 @@
+import pprint
+
+import numpy
+
 from sqlalchemy import Table, ForeignKey, Column
 from sqlalchemy.dialects.mysql import DOUBLE, TINYINT, LONGBLOB
 from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Unicode, String
@@ -5,6 +9,8 @@ from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Un
 # declarative_base instance used for TurboGears integration
 from sqlalchemy.ext.declarative import declarative_base
 DeclarativeBasePlasmid = declarative_base()
+
+from klab import colortext
 
 
 class DBConstants(DeclarativeBasePlasmid):
@@ -18,6 +24,12 @@ class DBConstants(DeclarativeBasePlasmid):
 
 class Primers(DeclarativeBasePlasmid):
     __tablename__ = 'Primers'
+
+    _required_fields = ['sequence', 'direction', 'description', 'TM']
+    _optional_fields = ['secondary_id', 'GC', 'length', 'template_id', 'template_description']
+    _derived_or_generated_fields = ['creator', 'creator_entry_number', 'date']
+    _float_fields = ['GC', 'TM']
+    _int_fields = ['length']
 
     creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key = True)
     creator_entry_number = Column(Integer, nullable=False, primary_key = True)
@@ -33,9 +45,33 @@ class Primers(DeclarativeBasePlasmid):
     template_description = Column(Unicode(200, collation="utf8_bin"), nullable = True)
 
 
-    def commit(self, tsession):
-        #if tsession == None then create new session
-        pass
+    @staticmethod
+    def add(tsession, d, silent = True):
+
+        try:
+            for f in Primers._optional_fields:
+                if f not in d:
+                    d[f] = None
+            for f in Primers._float_fields:
+                if d[f] != None:
+                    d[f] = float(d[f])
+            for f in Primers._int_fields:
+                if d[f] != None:
+                    d[f] = int(d[f])
+            for k, v in d.iteritems():
+                if type(v) == float and numpy.isnan(v):
+                    d[k] = None
+            db_record_object = Primers(**d)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise
 
 
     def __repr__(self):
