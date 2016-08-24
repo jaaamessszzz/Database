@@ -18,13 +18,13 @@ class Plasmid_Utilities(object):
 
     * Find available cloning primers for a plasmid of interest
     * Golden Gate Assembly within a modular cloning (MoClo) system - see http://pubs.acs.org/doi/abs/10.1021/sb500366v
-    * Verify that Plasmids adhere to MoClo sequence standards
     * Upload assembled plasmids to the database
 
     ###########################
     # Planned Funtionality:   #
     ###########################
 
+    * Verify that Plasmids adhere to MoClo sequence standards
     * Generate annotated .ape files based on desired sequence features
 
     '''
@@ -176,7 +176,8 @@ class Plasmid_Utilities(object):
         :return:
         '''
 
-    def add_cassette_plasmid(self, user_input, table_info):
+
+    def add_cassette_plasmid_to_db(self, user_input, table_info):
         new_plasmid_entry = Plasmid(creator = user_input.creator,
                                     plasmid_name = user_input.UID,
                                     plasmid_type = user_input.assembly_type,
@@ -188,7 +189,6 @@ class Plasmid_Utilities(object):
 
         self.tsession.add(new_plasmid_entry)
         self.tsession.flush()
-        print new_plasmid_entry.creator_entry_number
 
         from sqlalchemy import and_
         left_connector = self.tsession.query(Cassette_Connector)\
@@ -213,8 +213,6 @@ class Plasmid_Utilities(object):
                                                       right_overhang = right_connector_overhang
                                                       )
 
-        print right_connector_overhang
-
         self.tsession.add(new_cassette_plasmid_entry)
         self.tsession.flush()
 
@@ -230,7 +228,40 @@ class Plasmid_Utilities(object):
         self.tsession.flush()
         # self.tsession.commit()
 
+    def generate_ape_file(self, user_input, table_info):
+        from Bio import SeqIO
+        from Bio.Seq import Seq
+        from Bio.SeqRecord import SeqRecord
+        from Bio.SeqFeature import SeqFeature, FeatureLocation
+        from Bio.Alphabet import IUPAC
 
+        features_list = []
+        restriction_sites = ['GGTCTC', 'CGTCTC']
+
+
+        for site in restriction_sites:
+            # try:
+            #     features_list.append(SeqFeature(FeatureLocation(table_info['Complete Assembly'].find('GGTCTC'),
+            #                                                     table_info['Complete Assembly'].find('GGTCTC') + len('GGTCTC'))))
+            # except:
+            #     continue
+            try:
+                features_list.append(SeqFeature(FeatureLocation(table_info['Complete Assembly'].find('CGTCTC'),
+                                                                table_info['Complete Assembly'].find('CGTCTC') + len('CGTCTC'))))
+            except:
+                continue
+
+        sequence = SeqRecord( Seq(table_info['Complete Assembly'],
+                                  IUPAC.unambiguous_dna),
+                              id=user_input.UID,
+                              name=user_input.UID,
+                              description=table_info['Complete Description'],
+                              features = features_list
+                              )
+
+        output_handle = open('%s.ape' %user_input.UID, 'w')
+        SeqIO.write(sequence, output_handle, 'gb')
+        output_handle.close()
 
 
 
