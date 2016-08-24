@@ -4,12 +4,29 @@ import pprint
 
 sys.path.insert(0, '..')
 
-from db import model
 from db.interface import DatabaseInterface
 from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type
 
 
 class Plasmid_Utilities(object):
+    '''
+    This is a class with modules for completing tasks involving manipulation of Plasmid sequences.
+
+    ###########################
+    # Available Funtionality: #
+    ###########################
+
+    * Find available cloning primers for a plasmid of interest
+    * Golden Gate Assembly within a modular cloning (MoClo) system - see http://pubs.acs.org/doi/abs/10.1021/sb500366v
+    * Verify that Plasmids adhere to MoClo sequence standards
+
+    ###########################
+    # Planned Funtionality:   #
+    ###########################
+
+    * Generate annotated .ape files based on desired sequence features
+
+    '''
     def __init__(self):
         asdf = 'asdf'
 
@@ -56,15 +73,15 @@ class Plasmid_Utilities(object):
                 print 'Primer', ID, "(R) binds the target plasmid with 5' at position", (len(target_sequence) - target_reverse_complement.find(sequence.upper()[20:]))
                 print '\n'
 
-    def cassette_assembly(self, part_plasmid_list):
+    def golden_gate_assembly(self, plasmid_list, restriction_enzyme):
         '''
-        This function will take user input of a list of part plasmids and attempt to assemble them into a cassette plasmid.
-        Cassette plasmid records should be automatically derived and pushed to the database upon a successful assembly.
+        This function will take user input of a list of plasmids and attempt to perform a golden gate assembly.
 
         :param part_plasmid_list: A list of part plasmids that the user wants to assemble into a cassette plasmid
-        :return:
+        :param restriction_enzyme: BsaI (cassette assembly) or BsmBI (Multicassette assembly)
+        :return: complete plasmid assembly as string
         '''
-        # print part_plasmid_list
+        # print plasmid_list
 
         # Create up the database session
         dbi = DatabaseInterface()
@@ -76,46 +93,74 @@ class Plasmid_Utilities(object):
             .filter(Part_Plasmid.creator_entry_number == Plasmid.creator_entry_number)\
             .filter(Part_Plasmid.creator == Part_Plasmid_Part.creator)\
             .filter(Part_Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number)\
-            .filter(Plasmid.plasmid_name.in_(part_plasmid_list)) \
+            .filter(Plasmid.plasmid_name.in_(plasmid_list)) \
             .filter(Part_Plasmid_Part.part_number == Part_Type.part_number)
 
-
+        if restriction_enzyme == 'BsaI':
+            site_F = 'GGTCTC'
+            site_R = 'GAGACC'
+        if restriction_enzyme == 'BsmBI':
+            site_F = 'CGTCTC'
+            site_R = 'GAGACG'
 
         part_list = []
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
-            print plasmid.plasmid_name
-            print plasmid.creator, plasmid.creator_entry_number
-            print part_plasmid_part.part_number
-            print part_type.overhang_3
+            print plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number
             print part_type.overhang_5
+            print part_type.overhang_3
 
-            assert plasmid.sequence.count('GGTCTC') == 1
-            assert plasmid.sequence.count('GAGACC') == 1
+            assert plasmid.sequence.count(site_F) == 1,\
+                'Error: There is more than one forward %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
+            assert plasmid.sequence.count(site_R) == 1, \
+                'Error: There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
 
             sequence_upper = plasmid.sequence.upper()
-            part_list.append( plasmid.sequence[
+            site_F_position = sequence_upper.find(part_type.overhang_5, sequence_upper.find('GGTCTC'))
+            site_R_position = sequence_upper.find(part_type.overhang_3, sequence_upper.find('GAGACC') - 10) + 4
+
+            # Circular permutation so that forward cut site is alway upstream of reverse cut site in linear sequence
+            if site_F_position > site_R_position:
+                sequence_upper = sequence_upper[site_R_position + 7:] + sequence_upper[:site_R_position + 7]
+
+            part_list.append( sequence_upper[
                               sequence_upper.find(part_type.overhang_5, sequence_upper.find('GGTCTC')):
                               sequence_upper.find(part_type.overhang_3, sequence_upper.find('GAGACC') - 10) + 4
                               ])
 
-        for part in part_list:
-            if part[:4].upper() == 'CCCT':
-                intermediate = part.upper()
-                part_list.remove(part)
-                break
+        # Start with Part one (cassette assembly) or backbone (multicassette assembly) so that there is consistency in how the plasmids are assembled
+        if restriction_enzyme == 'BsaI':
+            for part in part_list:
+                if part[:4].upper() == 'CCCT':
+                    intermediate = part.upper()
+                    part_list.remove(part)
+                    break
+        if restriction_enzyme == 'BsmBI':
+            for part in part_list:
+                if part[:4].upper() == 'CTGA':
+                    intermediate = part.upper()
+                    part_list.remove(part)
+                    break
 
-        while len(part_list) != 0:
+        assembly_step = 0
+        assembly_steps = len(part_list)
+
+        while assembly_step < assembly_steps:
             for part in part_list:
                 # If part 5' and intermediate 3' match...
                 if part.upper()[:4] == intermediate.upper()[-4:]:
                     intermediate = intermediate.upper()[:-4] + part.upper()
-                    part_list.remove(part)
-                # # If part 3' and intermediate 5' match...
-                # elif part.upper()[-4:] == intermediate.upper()[:4]:
-                #     intermediate = part.upper() + intermediate.upper()[4:]
-                #     part_list.remove(part)
-        assert len(part_list) == 0
+            assembly_step += 1
+
+        assert intermediate[-4:] == intermediate[:4], 'Error: Incomplete assembly! This assembly does not produce a circular plasmid! :('
         complete_assembly = intermediate[:-4].upper()
-        pprint.pprint(complete_assembly)
+
+        return complete_assembly
+
+    def plasmid_checks(self, plasmid):
+        '''
+        Verifies that a plasmid conforms to modular cloning sequence standards
+
+        :return:
+        '''
 

@@ -5,6 +5,7 @@ import numpy
 from sqlalchemy import Table, ForeignKey, Column
 from sqlalchemy.dialects.mysql import DOUBLE, TINYINT, LONGBLOB
 from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Unicode, String
+from sqlalchemy.orm import relationship
 
 # declarative_base instance used for TurboGears integration
 from sqlalchemy.ext.declarative import declarative_base
@@ -123,9 +124,12 @@ class Plasmid(DeclarativeBasePlasmid):
     location = Column(Unicode(250, collation="utf8_bin"), nullable=False)
     description = Column(Text(), nullable=False)
     sequence = Column(Text(), nullable=False)
-    ape_file = Column(LONGBLOB(), nullable=True)
     status = Column(Enum("designed","verified","abandoned"), nullable=False)
     date = Column(TIMESTAMP, nullable=False)
+
+    # def __repr__(self):
+    #     return 'Internal numbering: {0} {1}\n' \
+    #           'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
 
 
 ######
@@ -200,10 +204,14 @@ class Origin(DeclarativeBasePlasmid):
 class Part_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid'
 
-    creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    creator = Column(Unicode(5), nullable=False, primary_key=True)
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable=False, primary_key=True)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable=False, primary_key=True)
     resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False)
 
+    # ID = relationship("Plasmid", primaryjoin='and_(Plasmid.creator==Part_Plasmid.creator, Plasmid.creator_entry_number==Part_Plasmid.creator_entry_number)')
+
+    # def __repr__(self):
+    #     return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
 
 class Part_Plasmid_Part(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid_Part'
@@ -212,13 +220,15 @@ class Part_Plasmid_Part(DeclarativeBasePlasmid):
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     part_number = Column(String(4), nullable=False, primary_key=True)
 
+    # def __repr__(self):
+    #     return 'Internal numbering: {0} {1}\nPart number: {2}'.format(self.creator, self.creator_entry_number, self.part_number)
 
 class Part_Type(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Type'
 
-    part_number = Column(String(4), nullable=False, primary_key=True)
-    overhang_5 = Column(String(4), nullable=False)
-    overhang_3 = Column(String(4), nullable=False)
+    part_number = Column(Unicode(4), nullable=False, primary_key=True)
+    overhang_5 = Column(Unicode(4), nullable=False)
+    overhang_3 = Column(Unicode(4), nullable=False)
 
 
 class Plasmid_Feature(DeclarativeBasePlasmid):
