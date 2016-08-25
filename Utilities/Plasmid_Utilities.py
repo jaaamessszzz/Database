@@ -1,11 +1,9 @@
-import os
 import sys
-import pprint
 
 sys.path.insert(0, '..')
 
 from db.interface import DatabaseInterface
-from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector
+from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature
 
 
 class Plasmid_Utilities(object):
@@ -18,14 +16,15 @@ class Plasmid_Utilities(object):
 
     * Find available cloning primers for a plasmid of interest
     * Golden Gate Assembly within a modular cloning (MoClo) system - see http://pubs.acs.org/doi/abs/10.1021/sb500366v
+    * Verify that Plasmids adhere to MoClo sequence standards
+    * Generate annotated .ape files based on desired sequence features
     * Upload assembled plasmids to the database
 
     ###########################
     # Planned Funtionality:   #
     ###########################
 
-    * Verify that Plasmids adhere to MoClo sequence standards
-    * Generate annotated .ape files based on desired sequence features
+    * Assemble and submit part plasmids to the database
 
     '''
     def __init__(self):
@@ -110,9 +109,9 @@ class Plasmid_Utilities(object):
                 print "%s\t%s\t%s\t%s"% (plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
 
                 assert plasmid.sequence.count(site_F) == 1,\
-                    'Error: There is more than one forward %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
+                    'There is more than one forward %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
                 assert plasmid.sequence.count(site_R) == 1, \
-                    'Error: There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
+                    'There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
 
                 sequence_upper = plasmid.sequence.upper()
                 site_F_position = sequence_upper.find(part_type.overhang_5, sequence_upper.find(site_F))
@@ -162,20 +161,35 @@ class Plasmid_Utilities(object):
                     intermediate = intermediate.upper()[:-4] + part.upper()
             assembly_step += 1
 
-        assert intermediate[-4:] == intermediate[:4], 'Error: Incomplete assembly! This assembly does not produce a circular plasmid! :('
+        assert intermediate[-4:] == intermediate[:4], 'Incomplete assembly! This assembly does not produce a circular plasmid! :('
 
         table_info['Complete Assembly'] = intermediate[:-4].upper()
-        table_info['Complete Description'] = ' - '.join(table_info['Description'])
+        table_info['Complete Description'] = '\n'.join(table_info['Description'])
 
         return table_info
 
-    def plasmid_checks(self, plasmid_name):
+    def plasmid_checks(self, table_info, user_input):
         '''
-        Verifies that a plasmid conforms to modular cloning sequence standards
+        Verifies that a plasmid conforms to modular cloning sequence standards before entry into database
 
         :return:
         '''
+        if user_input.assembly_type == 'Part':
+            pass
 
+        if user_input.assembly_type == 'Cassette':
+            assert table_info['Complete Assembly'].count('CGTCTC') == 1, \
+                'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('CGTCTC'), 'BsmBI')
+            assert table_info['Complete Assembly'].count('GAGACG') == 1, \
+                'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
+
+        if user_input.assembly_type == 'Multicassette':
+            assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
+                'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
+                'BsaI', user_input.UID, table_info['Complete Assembly'].count('GGTCTC'), 'BsaI')
+            assert table_info['Complete Assembly'].count('GAGACC') == 1, \
+                'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
+                'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
 
     def add_cassette_plasmid_to_db(self, user_input, table_info):
         new_plasmid_entry = Plasmid(creator = user_input.creator,
@@ -232,24 +246,93 @@ class Plasmid_Utilities(object):
         from Bio import SeqIO
         from Bio.Seq import Seq
         from Bio.SeqRecord import SeqRecord
-        from Bio.SeqFeature import SeqFeature, FeatureLocation
+        from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
         from Bio.Alphabet import IUPAC
 
         features_list = []
-        restriction_sites = ['GGTCTC', 'CGTCTC']
+        features_query = self.tsession.query(Feature, Feature_Type).filter(Feature.Feature_type == Feature_Type.Feature_type)
+        possible_features = [(record.Feature_name, record.Feature_type, record.Feature_sequence, color.color, record.description) for record, color in features_query]
+
+        for site in possible_features:
+            target = site[2].upper()
+            #Find forward sequences from features database
+            if table_info['Complete Assembly'].find(target) != -1:
+                # Treat type II restriction enzymes as special cases
+                if site[1] == 'Restrxn Type II':
+                    # Forward Restriction Site
+                    features_list.append(
+                        SeqFeature(
+                            CompoundLocation(
+                                [
+                                    FeatureLocation(table_info['Complete Assembly'].find(target),table_info['Complete Assembly'].find(target) + len(target)),
+                                    FeatureLocation(table_info['Complete Assembly'].find(target) + 7, table_info['Complete Assembly'].find(target) + 11)
+                                ]
+                            ),
+                            type = site[1],
+                            strand = 1,
+                            qualifiers = {"label": site[0],
+                                          "ApEinfo_label": site[0],
+                                          "ApEinfo_fwdcolor": site[3],
+                                          "ApEinfo_revcolor":site[3],
+                                          "ApEinfo_graphicformat":"arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                          }
+                        )
+                    )
+                    # Reverse Restriction Site
+                    features_list.append(
+                            SeqFeature(
+                                CompoundLocation(
+                                    [
+                                        FeatureLocation(table_info['Complete Assembly'].find(self.reverse_complement(target)),table_info['Complete Assembly'].find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
+                                        FeatureLocation(table_info['Complete Assembly'].find(self.reverse_complement(target)) - 5, table_info['Complete Assembly'].find(self.reverse_complement(target)) - 1)
+                                    ]
+                                ),
+                                type = site[1],
+                                strand = -1,
+                                qualifiers = {"label": site[0],
+                                              "ApEinfo_label": site[0],
+                                              "ApEinfo_fwdcolor": site[3],
+                                              "ApEinfo_revcolor":site[3],
+                                              "ApEinfo_graphicformat":"arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                              }
+                            )
+                        )
+                else:
+                    features_list.append(
+                        SeqFeature(
+                            FeatureLocation(table_info['Complete Assembly'].find(target), table_info['Complete Assembly'].find(target) + len(target)),
+                            type=site[1],
+                            strand=1,
+                            qualifiers={"label": site[0],
+                                        "ApEinfo_label": site[0],
+                                        "ApEinfo_fwdcolor": site[3],
+                                        "ApEinfo_revcolor": site[3],
+                                        "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                        }
+                        )
+                    )
+
+            if table_info['Complete Assembly'].find(self.reverse_complement(target)) != -1:
+                if site[1] == 'Restrxn Type II':
+                    pass
+                else:
+                    features_list.append(
+                        SeqFeature(
+                            FeatureLocation(table_info['Complete Assembly'].find(self.reverse_complement(target)),
+                                            table_info['Complete Assembly'].find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
+                            type=site[1],
+                            strand=-1,
+                            qualifiers={"label": site[1],
+                                        "ApEinfo_label": site[0],
+                                        "ApEinfo_fwdcolor": site[3],
+                                        "ApEinfo_revcolor": site[3],
+                                        "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                        }
+                        )
+                    )
 
 
-        for site in restriction_sites:
-            # try:
-            #     features_list.append(SeqFeature(FeatureLocation(table_info['Complete Assembly'].find('GGTCTC'),
-            #                                                     table_info['Complete Assembly'].find('GGTCTC') + len('GGTCTC'))))
-            # except:
-            #     continue
-            try:
-                features_list.append(SeqFeature(FeatureLocation(table_info['Complete Assembly'].find('CGTCTC'),
-                                                                table_info['Complete Assembly'].find('CGTCTC') + len('CGTCTC'))))
-            except:
-                continue
+        # features_list.append(SeqFeature(FeatureLocation(100,200), type = 'asdf', strand = 1, qualifiers={'label':'qwer'}))
 
         sequence = SeqRecord( Seq(table_info['Complete Assembly'],
                                   IUPAC.unambiguous_dna),
@@ -259,9 +342,8 @@ class Plasmid_Utilities(object):
                               features = features_list
                               )
 
-        output_handle = open('%s.ape' %user_input.UID, 'w')
-        SeqIO.write(sequence, output_handle, 'gb')
-        output_handle.close()
+        with open('%s-TEST.gb' % user_input.UID, 'w') as final_ape_output:
+            SeqIO.write(sequence, final_ape_output, 'gb')
 
 
 
