@@ -107,8 +107,10 @@ class Cassette_Plasmid(DeclarativeBasePlasmid):
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
-    left_connector = Column(Integer, nullable=True)
-    right_connector = Column(Integer, nullable=True)
+    left_connector_part = Column(Enum('1','5'), nullable=False, primary_key=True)
+    left_overhang = Column(Unicode(4, collation="utf8_bin"), nullable=False, primary_key=True)
+    right_connector_part = Column(Enum('1','5'), nullable=False, primary_key=True)
+    right_overhang = Column(Unicode(4, collation="utf8_bin"), nullable=False, primary_key=True)
 
 
 class Feature(DeclarativeBasePlasmid):
@@ -117,20 +119,15 @@ class Feature(DeclarativeBasePlasmid):
     Feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False, primary_key=True)
     MD5_hash = Column(String(64), nullable=True)
     Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False)
-    Feature_sequence = Column(Text, nullable=True)
+    Feature_sequence = Column(Text(collation="utf8_bin"), nullable=True)
+    description = Column(Text(collation="utf8_bin"))
 
 
 class Feature_Type(DeclarativeBasePlasmid):
     __tablename__ = 'Feature_Type'
 
     Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False, primary_key=True)
-
-
-class Left_Cassette_Connector(DeclarativeBasePlasmid):
-    __tablename__ = 'Left_Cassette_Connector'
-
-    connector = Column(Integer, nullable=False, primary_key=True)
-    overhang = Column(String(4), nullable=True)
+    color = Column(Unicode(7, collation="utf8_bin"), nullable=False)
 
 
 class Multicassette_Assembly(DeclarativeBasePlasmid):
@@ -198,10 +195,12 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False)
 
 
-class Right_Cassette_Connector(DeclarativeBasePlasmid):
-    __tablename__ = 'Right_Cassette_Connector'
+class Cassette_Connector(DeclarativeBasePlasmid):
+    __tablename__ = 'Cassette_Connector'
 
-    connector = Column(Integer, nullable=False, primary_key=True)
-    overhang = Column(String(4), nullable=True)
-
+    connector_ID = Column(Unicode(2, collation="utf8_bin"), nullable=False, unique=True)
+    creator_entry_number = Column(Integer, ForeignKey('Part_Plasmid_Part.creator_entry_number'), nullable=False)
+    creator = Column(Unicode(5), ForeignKey('Part_Plasmid_Part.creator'), nullable=False)
+    connector_part = Column(Enum('1','5'), nullable=False, primary_key=True)
+    overhang = Column(Unicode(4, collation="utf8_bin"), nullable=False, primary_key=True)
 
