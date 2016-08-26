@@ -1,9 +1,10 @@
 import sys
+import io
 
 sys.path.insert(0, '..')
 
 from db.interface import DatabaseInterface
-from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature
+from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
 
 
 class Plasmid_Utilities(object):
@@ -25,7 +26,8 @@ class Plasmid_Utilities(object):
     ###########################
 
     * Multicassette assembly and submission
-
+    * Annotating working and archive locations for all plasmids
+    * Storing information for mutations and libraries
     '''
     def __init__(self):
         # Create up the database session
@@ -152,8 +154,8 @@ class Plasmid_Utilities(object):
             sequence_upper = user_input.input_sequences[0].upper()
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             for asdf in part_entry_vector:
-                print asdf.sequence
                 intermediate = asdf.sequence[ : (asdf.sequence.upper().find('GAGACG') - 1) ]
+                print intermediate
 
         # if user_input.assembly_type == 'Multicassette':
         #     site_F = 'CGTCTC'
@@ -204,8 +206,8 @@ class Plasmid_Utilities(object):
             assert table_info['Complete Assembly'].count('CGTCTC') == 0, \
                 'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
                     'BsmBI', user_input.UID, table_info['Complete Assembly'].count('CGTCTC'), 'BsmBI')
-            assert table_info['Complete Assembly'].count('GGTATCTGCGCTCTGCTGAAGCCAGTTACCTTCGGAAAAAGAGTTGGTAGCTCTTGATCCGGCAAACAAACCACCGCTGGTAGCGGTGGTTTTTTTGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACGGGGTCTGACGCTCAGTGGAACGAAAACTCACGTTAAGGGATTTTGGTCATGACTAGTGCTTGGATTCTCACCAATAAAAAACGCCCGGCGGCAACCGAGCGTTCTGAACAAATCCAGATGGAGTTCTGAGGTCATTACTGGATCTATCAACAGGAGTCCAAGCGAGCTCGATATCAAATTACGCCCCGCCCTGCCACTCATCGCAGTACTGTTGTAATTCATTAAGCATTCTGCCGACATGGAAGCCATCACAAACGGCATGATGAACCTGAATCGCCAGCGGCATCAGCACCTTGTCGCCTTGCGTATAATATTTGCCCATGGTGAAAACGGGGGCGAA') == 0, \
-                "You do not need to include the backbone sequence in your submission, we'll take care of that!" # 607-1108 of pAAG16, it's just a rondom section of the backbone that overlaps both the origin and resistance marker
+            # assert table_info['Complete Assembly'].count('GGTATCTGCGCTCTGCTGAAGCCAGTTACCTTCGGAAAAAGAGTTGGTAGCTCTTGATCCGGCAAACAAACCACCGCTGGTAGCGGTGGTTTTTTTGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACGGGGTCTGACGCTCAGTGGAACGAAAACTCACGTTAAGGGATTTTGGTCATGACTAGTGCTTGGATTCTCACCAATAAAAAACGCCCGGCGGCAACCGAGCGTTCTGAACAAATCCAGATGGAGTTCTGAGGTCATTACTGGATCTATCAACAGGAGTCCAAGCGAGCTCGATATCAAATTACGCCCCGCCCTGCCACTCATCGCAGTACTGTTGTAATTCATTAAGCATTCTGCCGACATGGAAGCCATCACAAACGGCATGATGAACCTGAATCGCCAGCGGCATCAGCACCTTGTCGCCTTGCGTATAATATTTGCCCATGGTGAAAACGGGGGCGAA') == 0, \
+            #     "You do not need to include the backbone sequence in your submission, we'll take care of that!" # 607-1108 of pAAG16, it's just a rondom section of the backbone that overlaps both the origin and resistance marker
             assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
                 'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
                     'BsaI', user_input.UID, table_info['Complete Assembly'].count('GGTCTC'), 'BsaI')
@@ -240,20 +242,22 @@ class Plasmid_Utilities(object):
                              'status': 'designed'
                              }
 
-        current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=False)
+        current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=True)
+
+        self.add_features(table_info, current_plasmid_entry)
 
         new_part_plasmid_entry = {'creator' : user_input.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
                                   'resistance' : 'CM'
                                   }
-        Part_Plasmid.add(self.tsession, new_part_plasmid_entry, silent=False)
+        Part_Plasmid.add(self.tsession, new_part_plasmid_entry, silent=True)
 
         for part in user_input.part_number.split(','):
             new_part_plasmid_part_entry = {'creator' : user_input.creator,
                                            'creator_entry_number' : current_plasmid_entry.creator_entry_number,
                                            'part_number' : part.strip()
                                            }
-            Part_Plasmid_Part.add(self.tsession, new_part_plasmid_part_entry, silent = False)
+            Part_Plasmid_Part.add(self.tsession, new_part_plasmid_part_entry, silent = True)
 
         self.tsession.commit()
 
@@ -269,8 +273,7 @@ class Plasmid_Utilities(object):
 
         current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=False)
 
-        import pprint
-        pprint.pprint(table_info)
+        self.add_features(table_info, current_plasmid_entry)
 
         from sqlalchemy import and_
         left_connector = self.tsession.query(Cassette_Connector)\
@@ -307,6 +310,26 @@ class Plasmid_Utilities(object):
             Cassette_Assembly.add(self.tsession, new_cassette_assembly_entry, silent=False)
 
         self.tsession.commit()
+
+    def add_features(self, table_info, current_plasmid_entry):
+        features_query = self.tsession.query(Feature, Feature_Type).filter(
+            Feature.Feature_type == Feature_Type.Feature_type)
+        possible_features = [
+            (record.Feature_name, record.Feature_type, record.Feature_sequence, color.color, record.description) for
+            record, color in features_query]
+        for site in possible_features:
+            target = site[2].upper()
+            if table_info['Complete Assembly'].find(target) != -1:
+                input_dict = {'creator' : current_plasmid_entry.creator,
+                              'creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                              'feature_name' : site[0]
+                              }
+                Plasmid_Feature.add(self.tsession, input_dict)
+
+    def add_file(self, user_input, table_info):
+        GenBank_File = self.generate_ape_file(user_input, table_info)
+
+
 
     def generate_ape_file(self, user_input, table_info):
         from Bio import SeqIO
@@ -397,9 +420,6 @@ class Plasmid_Utilities(object):
                         )
                     )
 
-
-        # features_list.append(SeqFeature(FeatureLocation(100,200), type = 'asdf', strand = 1, qualifiers={'label':'qwer'}))
-
         sequence = SeqRecord( Seq(table_info['Complete Assembly'],
                                   IUPAC.unambiguous_dna),
                               id=user_input.UID,
@@ -411,7 +431,10 @@ class Plasmid_Utilities(object):
         with open('%s.gb' % user_input.UID, 'w') as final_ape_output:
             SeqIO.write(sequence, final_ape_output, 'gb')
 
+        # GenBank_File = io.BytesIO(open('%s.gb' % user_input.UID, 'rb').read())
+        # return GenBank_File
 
-
+    def generate_mutations(self):
+        pass
 
 
