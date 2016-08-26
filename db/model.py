@@ -335,7 +335,7 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     @staticmethod
     def add(tsession, input_dict, silent=True):
         try:
-            db_record_object = Part_Plasmid_Part(**input_dict)
+            db_record_object = Plasmid_Feature(**input_dict)
 
             if not silent:
                 colortext.pcyan('Adding this record:')
@@ -366,6 +366,8 @@ class File_Type(DeclarativeBasePlasmid):
 class Plasmid_File(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid_File'
 
+    _required_fields = ['creator', 'creator_entry_number', 'file_name', 'file_type', 'Description', 'File']
+
     ID = Column(Integer, nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, ForeignKey('Part_Plasmid_Part.creator_entry_number'), nullable=False)
     creator = Column(Unicode(5), ForeignKey('Part_Plasmid_Part.creator'), nullable=False)
@@ -374,3 +376,17 @@ class Plasmid_File(DeclarativeBasePlasmid):
     Description = Column( Text(), nullable=False)
     File = Column(LONGBLOB(), nullable=False)
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Plasmid_File(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise

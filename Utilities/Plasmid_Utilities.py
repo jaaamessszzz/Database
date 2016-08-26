@@ -1,5 +1,5 @@
 import sys
-import io
+import StringIO
 
 sys.path.insert(0, '..')
 
@@ -244,8 +244,6 @@ class Plasmid_Utilities(object):
 
         current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=True)
 
-        self.add_features(table_info, current_plasmid_entry)
-
         new_part_plasmid_entry = {'creator' : user_input.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
                                   'resistance' : 'CM'
@@ -258,6 +256,9 @@ class Plasmid_Utilities(object):
                                            'part_number' : part.strip()
                                            }
             Part_Plasmid_Part.add(self.tsession, new_part_plasmid_part_entry, silent = True)
+
+        self.add_features(table_info, current_plasmid_entry)
+        self.upload_file(user_input, table_info, current_plasmid_entry)
 
         self.tsession.commit()
 
@@ -272,8 +273,6 @@ class Plasmid_Utilities(object):
                              }
 
         current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=False)
-
-        self.add_features(table_info, current_plasmid_entry)
 
         from sqlalchemy import and_
         left_connector = self.tsession.query(Cassette_Connector)\
@@ -309,6 +308,9 @@ class Plasmid_Utilities(object):
                                            }
             Cassette_Assembly.add(self.tsession, new_cassette_assembly_entry, silent=False)
 
+        self.add_features(table_info, current_plasmid_entry)
+        self.upload_file(user_input, table_info, current_plasmid_entry)
+
         self.tsession.commit()
 
     def add_features(self, table_info, current_plasmid_entry):
@@ -326,10 +328,26 @@ class Plasmid_Utilities(object):
                               }
                 Plasmid_Feature.add(self.tsession, input_dict)
 
-    def add_file(self, user_input, table_info):
-        GenBank_File = self.generate_ape_file(user_input, table_info)
+    def upload_file(self, user_input, table_info, current_plasmid_entry):
+        buffy = self.generate_ape_file(user_input, table_info)
 
+        new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
+                                  'creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                                  'file_name' : '%s.gb' % user_input.UID,
+                                  'file_type' : 'GenBank file',
+                                  'Description' : current_plasmid_entry.description,
+                                  'File' : buffy
+                                  }
 
+        Plasmid_File.add(self.tsession, new_plasmid_file_entry, silent=False)
+
+        # ID = Column(Integer, nullable=False, primary_key=True)
+        # creator_entry_number = Column(Integer, ForeignKey('Part_Plasmid_Part.creator_entry_number'), nullable=False)
+        # creator = Column(Unicode(5), ForeignKey('Part_Plasmid_Part.creator'), nullable=False)
+        # file_name = Column(Unicode(100, collation="utf8_bin"), nullable=False)
+        # file_type = Column(Unicode(100), nullable=False)
+        # Description = Column(Text(), nullable=False)
+        # File = Column(LONGBLOB(), nullable=False)
 
     def generate_ape_file(self, user_input, table_info):
         from Bio import SeqIO
@@ -428,12 +446,10 @@ class Plasmid_Utilities(object):
                               features = features_list
                               )
 
-        import StringIO
         buffy = StringIO.StringIO()
         SeqIO.write(sequence, buffy, 'gb')
+
         return buffy.getvalue()
-        #GenBank_File = io.BytesIO(open('%s.gb' % user_input.UID, 'rb').read())
-        # return GenBank_File
 
     def generate_mutations(self):
         pass
