@@ -324,11 +324,28 @@ class Part_Type(DeclarativeBasePlasmid):
 class Plasmid_Feature(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid_Feature'
 
+    _required_fields = ['creator', 'creator_entry_number', 'feature_name']
+    _derived_or_generated_fields = ['ID']
+
     ID = Column(Integer, nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, nullable=False)
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
     feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False)
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Part_Plasmid_Part(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise
 
 class Cassette_Connector(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Connector'
@@ -345,3 +362,15 @@ class File_Type(DeclarativeBasePlasmid):
 
     file_type = Column(Unicode(100), nullable=False, primary_key=True)
     file_extension = Column(String(16), nullable = True)
+
+class Plasmid_File(DeclarativeBasePlasmid):
+    __tablename__ = 'Plasmid_File'
+
+    ID = Column(Integer, nullable=False, primary_key=True)
+    creator_entry_number = Column(Integer, ForeignKey('Part_Plasmid_Part.creator_entry_number'), nullable=False)
+    creator = Column(Unicode(5), ForeignKey('Part_Plasmid_Part.creator'), nullable=False)
+    file_name = Column(Unicode(100, collation="utf8_bin"), nullable=False)
+    file_type = Column(Unicode(100), nullable=False)
+    Description = Column( Text(), nullable=False)
+    File = Column(LONGBLOB(), nullable=False)
+
