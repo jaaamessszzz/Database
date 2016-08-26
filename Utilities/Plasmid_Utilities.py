@@ -79,11 +79,22 @@ class Plasmid_Utilities(object):
         '''
         This function will take user input of a list of plasmids and attempt to perform a golden gate assembly.
 
-        :param part_plasmid_list: A list of part plasmids that the user wants to assemble into a cassette plasmid
-        :param assembly_type: Cassette or Multicassette
+        class user_input(object):
+            def __init__(self, creator, input_sequences, assembly_type, UID, location):
+                self.creator = creator (creator initials)
+                self.input_sequences = input_sequences (user defined names of input plasmids for assembly)
+                self.assembly_type = assembly_type (type of assembly e.g. part, cassette, multicassette)
+                self.UID = UID (user defined name for the assembled plasmid)
+                self.location = location (where is the user planning on putting this new plasmid)
+
         :return: complete plasmid assembly as string
         '''
-        # print plasmid_list
+
+        table_info = {}
+        table_info['Part list'] = []
+        table_info['Part list ID'] = []
+        table_info['Description'] = []
+        table_info['Connectors'] = {}
 
         def fetch_cassette_parts():
             # Get sequences and part numbers for listed part plasmids
@@ -92,14 +103,9 @@ class Plasmid_Utilities(object):
                 .filter(Part_Plasmid.creator_entry_number == Plasmid.creator_entry_number)\
                 .filter(Part_Plasmid.creator == Part_Plasmid_Part.creator)\
                 .filter(Part_Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number)\
-                .filter(Plasmid.plasmid_name.in_(user_input.input_plasmids)) \
+                .filter(Plasmid.plasmid_name.in_(user_input.input_sequences)) \
                 .filter(Part_Plasmid_Part.part_number == Part_Type.part_number)
 
-            table_info = {}
-            table_info['Part list'] = []
-            table_info['Part list ID'] = []
-            table_info['Description'] = []
-            table_info['Connectors'] = {}
             restriction_enzyme = 'BsaI'
             site_F = 'GGTCTC'
             site_R = 'GAGACC'
@@ -141,6 +147,14 @@ class Plasmid_Utilities(object):
                     table_info['Part list'].remove(part)
                     break
 
+        if user_input.assembly_type == 'Part':
+            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2)
+            sequence_upper = user_input.input_sequences[0].upper()
+            table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
+            for asdf in part_entry_vector:
+                print asdf.sequence
+                intermediate = asdf.sequence[ : (asdf.sequence.upper().find('GAGACG') - 1) ]
+
         # if user_input.assembly_type == 'Multicassette':
         #     site_F = 'CGTCTC'
         #     site_R = 'GAGACG'
@@ -163,7 +177,7 @@ class Plasmid_Utilities(object):
 
         assert intermediate[-4:] == intermediate[:4], 'Incomplete assembly! This assembly does not produce a circular plasmid! :('
 
-        table_info['Complete Assembly'] = intermediate[:-4].upper()
+        table_info['Complete Assembly'] = intermediate[4:].upper()
         table_info['Complete Description'] = '\n'.join(table_info['Description'])
 
         return table_info
@@ -175,7 +189,17 @@ class Plasmid_Utilities(object):
         :return:
         '''
         if user_input.assembly_type == 'Part':
-            pass
+            if user_input.part_number == '1' or user_input.part_number == '5':
+                assert table_info['Complete Assembly'].count('GAGACG') == 1, \
+                    'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
+                    'BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
+
+            assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
+                'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
+                    'BsaI', user_input.UID, table_info['Complete Assembly'].count('GGTCTC'), 'BsaI')
+            assert table_info['Complete Assembly'].count('GAGACC') == 1, \
+                'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
+                    'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
 
         if user_input.assembly_type == 'Cassette':
             assert table_info['Complete Assembly'].count('CGTCTC') == 1, \
@@ -184,6 +208,7 @@ class Plasmid_Utilities(object):
                 'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
 
         if user_input.assembly_type == 'Multicassette':
+            # Ehhh... I'll leave this for now
             assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
                 'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
                 'BsaI', user_input.UID, table_info['Complete Assembly'].count('GGTCTC'), 'BsaI')
@@ -191,18 +216,47 @@ class Plasmid_Utilities(object):
                 'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
                 'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
 
-    def add_cassette_plasmid_to_db(self, user_input, table_info):
-        new_plasmid_entry = Plasmid(creator = user_input.creator,
-                                    plasmid_name = user_input.UID,
-                                    plasmid_type = user_input.assembly_type,
-                                    location = user_input.location,
-                                    description = table_info['Complete Description'],
-                                    sequence = table_info['Complete Assembly'],
-                                    status = 'designed'
-                                    )
+    def add_part_plasmid_to_db(self, user_input, table_info):
+        new_plasmid_entry = {'creator': user_input.creator,
+                             'plasmid_name': user_input.UID,
+                             'plasmid_type': user_input.assembly_type,
+                             'location': user_input.location,
+                             'description': user_input.part_description,
+                             'sequence': table_info['Complete Assembly'],
+                             'status': 'designed'
+                             }
 
-        self.tsession.add(new_plasmid_entry)
-        self.tsession.flush()
+        current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=False)
+
+        new_part_plasmid_entry = {'creator' : user_input.creator,
+                                  'creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                                  'resistance' : 'CM'
+                                  }
+        Part_Plasmid.add(self.tsession, new_part_plasmid_entry, silent=False)
+
+        for part in user_input.part_number.split(','):
+            new_part_plasmid_part_entry = {'creator' : user_input.creator,
+                                           'creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                                           'part_number' : part.strip()
+                                           }
+            Part_Plasmid_Part.add(self.tsession, new_part_plasmid_part_entry, silent = False)
+
+        self.tsession.commit()
+
+    def add_cassette_plasmid_to_db(self, user_input, table_info):
+        new_plasmid_entry = {'creator' : user_input.creator,
+                             'plasmid_name' : user_input.UID,
+                             'plasmid_type' : user_input.assembly_type,
+                             'location' : user_input.location,
+                             'description' : table_info['Complete Description'],
+                             'sequence' : table_info['Complete Assembly'],
+                             'status' : 'designed'
+                             }
+
+        current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=False)
+
+        import pprint
+        pprint.pprint(table_info)
 
         from sqlalchemy import and_
         left_connector = self.tsession.query(Cassette_Connector)\
@@ -219,28 +273,26 @@ class Plasmid_Utilities(object):
         for right_query in right_connector:
             right_connector_overhang = right_query.overhang
 
-        new_cassette_plasmid_entry = Cassette_Plasmid(creator = user_input.creator,
-                                                      creator_entry_number = new_plasmid_entry.creator_entry_number,
-                                                      left_connector_part = '1',
-                                                      left_overhang = left_connector_overhang,
-                                                      right_connector_part = '5',
-                                                      right_overhang = right_connector_overhang
-                                                      )
+        new_cassette_plasmid_entry = {'creator' : user_input.creator,
+                                      'creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                                      'left_connector_part' : '1',
+                                      'left_overhang' : left_connector_overhang,
+                                      'right_connector_part' : '5',
+                                      'right_overhang' : right_connector_overhang
+                                      }
 
-        self.tsession.add(new_cassette_plasmid_entry)
-        self.tsession.flush()
+        Cassette_Plasmid.add(self.tsession, new_cassette_plasmid_entry, silent=False)
 
         for constituent_part in table_info['Part list ID']:
-            new_cassette_assembly_entry = Cassette_Assembly(Cassette_creator = user_input.creator,
-                                                            Cassette_creator_entry_number = new_plasmid_entry.creator_entry_number,
-                                                            Part_number = constituent_part[0],
-                                                            Part_creator = constituent_part[1],
-                                                            Part_creator_entry_number = constituent_part[2]
-                                                            )
-            self.tsession.add(new_cassette_assembly_entry)
+            new_cassette_assembly_entry = {'Cassette_creator' : user_input.creator,
+                                           'Cassette_creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                                           'Part_number' : constituent_part[0],
+                                           'Part_creator' : constituent_part[1],
+                                           'Part_creator_entry_number' : constituent_part[2]
+                                           }
+            Cassette_Assembly.add(self.tsession, new_cassette_assembly_entry, silent=False)
 
-        self.tsession.flush()
-        # self.tsession.commit()
+        self.tsession.commit()
 
     def generate_ape_file(self, user_input, table_info):
         from Bio import SeqIO
@@ -342,7 +394,7 @@ class Plasmid_Utilities(object):
                               features = features_list
                               )
 
-        with open('%s-TEST.gb' % user_input.UID, 'w') as final_ape_output:
+        with open('%s.gb' % user_input.UID, 'w') as final_ape_output:
             SeqIO.write(sequence, final_ape_output, 'gb')
 
 
