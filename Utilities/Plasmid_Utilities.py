@@ -18,13 +18,13 @@ class Plasmid_Utilities(object):
     * Golden Gate Assembly within a modular cloning (MoClo) system - see http://pubs.acs.org/doi/abs/10.1021/sb500366v
     * Verify that Plasmids adhere to MoClo sequence standards
     * Generate annotated .ape files based on desired sequence features
-    * Upload assembled plasmids to the database
+    * Upload assembled plasmids to the database (part and cassette plasmids implemented)
 
     ###########################
     # Planned Funtionality:   #
     ###########################
 
-    * Assemble and submit part plasmids to the database
+    * Multicassette assembly and submission
 
     '''
     def __init__(self):
@@ -138,7 +138,7 @@ class Plasmid_Utilities(object):
 
             return table_info
 
-        # Start with Part one (cassette assembly) or backbone (multicassette assembly) so that there is consistency in how the plasmids are assembled
+        # Start with Part one (cassette assembly) so that there is consistency in how the plasmids are assembled
         if user_input.assembly_type == 'Cassette':
             table_info = fetch_cassette_parts()
             for part in table_info['Part list']:
@@ -186,35 +186,49 @@ class Plasmid_Utilities(object):
         '''
         Verifies that a plasmid conforms to modular cloning sequence standards before entry into database
 
+        # Part Plasmids #
+          * Part 1 and Part 5 should contain one reverse BsmBI site
+          * If not a Part 1 or Part 5, sequence should not contain BsmBI sites
+          *
         :return:
         '''
         if user_input.assembly_type == 'Part':
             if user_input.part_number == '1' or user_input.part_number == '5':
                 assert table_info['Complete Assembly'].count('GAGACG') == 1, \
-                    'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
-                    'BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
-
-            assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
+                    'There should be only one reverse %s site in a Connector Part! Your part %s submission contains %s reverse %s sites.' % (
+                    'BsmBI', user_input.part_number, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
+            else:
+                assert table_info['Complete Assembly'].count('GAGACG') == 0, \
+                    'There should not be any reverse %s sites in this part type! Your submission %s contains %s reverse %s site(s).' % (
+                        'BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
+            assert table_info['Complete Assembly'].count('CGTCTC') == 0, \
                 'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
+                    'BsmBI', user_input.UID, table_info['Complete Assembly'].count('CGTCTC'), 'BsmBI')
+            assert table_info['Complete Assembly'].count('GGTATCTGCGCTCTGCTGAAGCCAGTTACCTTCGGAAAAAGAGTTGGTAGCTCTTGATCCGGCAAACAAACCACCGCTGGTAGCGGTGGTTTTTTTGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACGGGGTCTGACGCTCAGTGGAACGAAAACTCACGTTAAGGGATTTTGGTCATGACTAGTGCTTGGATTCTCACCAATAAAAAACGCCCGGCGGCAACCGAGCGTTCTGAACAAATCCAGATGGAGTTCTGAGGTCATTACTGGATCTATCAACAGGAGTCCAAGCGAGCTCGATATCAAATTACGCCCCGCCCTGCCACTCATCGCAGTACTGTTGTAATTCATTAAGCATTCTGCCGACATGGAAGCCATCACAAACGGCATGATGAACCTGAATCGCCAGCGGCATCAGCACCTTGTCGCCTTGCGTATAATATTTGCCCATGGTGAAAACGGGGGCGAA') == 0, \
+                "You do not need to include the backbone sequence in your submission, we'll take care of that!" # 607-1108 of pAAG16, it's just a rondom section of the backbone that overlaps both the origin and resistance marker
+            assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
+                'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
                     'BsaI', user_input.UID, table_info['Complete Assembly'].count('GGTCTC'), 'BsaI')
             assert table_info['Complete Assembly'].count('GAGACC') == 1, \
-                'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
+                'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
                     'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
+
 
         if user_input.assembly_type == 'Cassette':
             assert table_info['Complete Assembly'].count('CGTCTC') == 1, \
-                'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('CGTCTC'), 'BsmBI')
+                'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('CGTCTC'), 'BsmBI')
             assert table_info['Complete Assembly'].count('GAGACG') == 1, \
-                'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
+                'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
 
         if user_input.assembly_type == 'Multicassette':
-            # Ehhh... I'll leave this for now
+            # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
             assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
-                'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
+                'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
                 'BsaI', user_input.UID, table_info['Complete Assembly'].count('GGTCTC'), 'BsaI')
             assert table_info['Complete Assembly'].count('GAGACC') == 1, \
-                'There is more than one reverse %s site in %s! This plasmid contains %s reverse %s sites.' % (
+                'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
                 'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
+
 
     def add_part_plasmid_to_db(self, user_input, table_info):
         new_plasmid_entry = {'creator': user_input.creator,
