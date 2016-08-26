@@ -117,6 +117,10 @@ class Users(DeclarativeBasePlasmid):
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
 
+    _required_fields = ['sequence', 'description', 'location', 'plasmid type', 'status']
+    _optional_fields = ['plasmid_name']
+    _derived_or_generated_fields = ['creator', 'creator_entry_number', 'date']
+
     creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     plasmid_name = Column(Unicode(100, collation="utf8_bin"), nullable=True, unique=True)
@@ -127,15 +131,39 @@ class Plasmid(DeclarativeBasePlasmid):
     status = Column(Enum("designed","verified","abandoned"), nullable=False)
     date = Column(TIMESTAMP, nullable=False)
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+
+        try:
+            for f in Plasmid._optional_fields:
+                if f not in input_dict:
+                    input_dict[f] = None
+
+            pprint.pprint(input_dict)
+
+            db_record_object = Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+            return db_record_object
+        except:
+            raise
+
     # def __repr__(self):
     #     return 'Internal numbering: {0} {1}\n' \
     #           'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
-
 
 ######
 
 class Cassette_Assembly(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Assembly'
+
+    _required_fields = ['Cassette_creator_entry_number', 'Cassette_creator', 'Part_number', 'Part_creator', 'Part_creator_entry_number']
 
     Cassette_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     Cassette_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
@@ -143,9 +171,26 @@ class Cassette_Assembly(DeclarativeBasePlasmid):
     Part_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
     Part_creator_entry_number = Column(Integer, nullable=False)
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Cassette_Assembly(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise
 
 class Cassette_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Plasmid'
+
+    _required_fields = ['left_connector_part', 'left_overhang', 'right_connector_part', 'right_overhang type']
+    _derived_or_generated_fields = ['creator', 'creator_entry_number']
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
@@ -154,6 +199,20 @@ class Cassette_Plasmid(DeclarativeBasePlasmid):
     right_connector_part = Column(Enum('1','5'), nullable=False, primary_key=True)
     right_overhang = Column(Unicode(4, collation="utf8_bin"), nullable=False, primary_key=True)
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Cassette_Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise
 
 class Feature(DeclarativeBasePlasmid):
     __tablename__ = 'Feature'
@@ -201,24 +260,58 @@ class Origin(DeclarativeBasePlasmid):
 class Part_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid'
 
+    _required_fields = ['creator', 'creator_entry_number', 'resistance']
+
     creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable=False, primary_key=True)
     creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable=False, primary_key=True)
     resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False)
 
     # ID = relationship("Plasmid", primaryjoin='and_(Plasmid.creator==Part_Plasmid.creator, Plasmid.creator_entry_number==Part_Plasmid.creator_entry_number)')
 
-    # def __repr__(self):
-    #     return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Part_Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise
+
+    def __repr__(self):
+        return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
 
 class Part_Plasmid_Part(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid_Part'
+
+    _required_fields = ['creator', 'creator_entry_number', 'part_number']
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
     part_number = Column(String(4), nullable=False, primary_key=True)
 
-    # def __repr__(self):
-    #     return 'Internal numbering: {0} {1}\nPart number: {2}'.format(self.creator, self.creator_entry_number, self.part_number)
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Part_Plasmid_Part(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+        except:
+            raise
+
+    def __repr__(self):
+        return 'Internal numbering: {0} {1}\nPart number: {2}'.format(self.creator, self.creator_entry_number, self.part_number)
 
 class Part_Type(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Type'
