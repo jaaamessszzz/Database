@@ -428,10 +428,11 @@ class Plasmid_Utilities(object):
                               features = features_list
                               )
 
-        with open('%s.gb' % user_input.UID, 'w') as final_ape_output:
-            SeqIO.write(sequence, final_ape_output, 'gb')
-
-        # GenBank_File = io.BytesIO(open('%s.gb' % user_input.UID, 'rb').read())
+        import StringIO
+        buffy = StringIO.StringIO()
+        SeqIO.write(sequence, buffy, 'gb')
+        return buffy.getvalue()
+        #GenBank_File = io.BytesIO(open('%s.gb' % user_input.UID, 'rb').read())
         # return GenBank_File
 
     def generate_mutations(self):
