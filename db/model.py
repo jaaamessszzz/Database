@@ -246,3 +246,9 @@ class Cassette_Connector(DeclarativeBasePlasmid):
     connector_part = Column(Enum('1','5'), nullable=False, primary_key=True)
     overhang = Column(Unicode(4, collation="utf8_bin"), nullable=False, primary_key=True)
 
+
+class File_Type(DeclarativeBasePlasmid):
+    __tablename__ = 'File_Type'
+
+    file_type = Column(Unicode(100), nullable=False, primary_key=True)
+    file_extension = Column(String(16), nullable = True)
