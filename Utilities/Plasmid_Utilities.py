@@ -141,7 +141,7 @@ class Plasmid_Utilities(object):
             return table_info
 
         # Start with Part one (cassette assembly) so that there is consistency in how the plasmids are assembled
-        if user_input.assembly_type == 'Cassette':
+        if user_input.assembly_type.lower() == 'cassette':
             table_info = fetch_cassette_parts()
             for part in table_info['Part list']:
                 if part[:4].upper() == 'CCCT':
@@ -149,7 +149,7 @@ class Plasmid_Utilities(object):
                     table_info['Part list'].remove(part)
                     break
 
-        if user_input.assembly_type == 'Part':
+        if user_input.assembly_type.lower() == 'part':
             part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2)
             sequence_upper = user_input.input_sequences[0].upper()
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
