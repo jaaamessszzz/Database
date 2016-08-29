@@ -2,9 +2,13 @@ import sys
 import StringIO
 
 sys.path.insert(0, '..')
-
-from db.interface import DatabaseInterface
-from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
+try:
+    from db.interface import DatabaseInterface
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
+except:
+    # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
+    from kprimers.db.interface import DatabaseInterface
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
 
 
 class Plasmid_Utilities(object):
@@ -29,10 +33,15 @@ class Plasmid_Utilities(object):
     * Annotating working and archive locations for all plasmids
     * Storing information for mutations and libraries
     '''
-    def __init__(self):
+    def __init__(self, tsession = None):
         # Create up the database session
-        self.dbi = DatabaseInterface()
-        self.tsession = self.dbi.get_session()
+        self.dbi = None
+        try:
+            self.dbi = DatabaseInterface()
+        except:
+            if not tsession:
+                raise
+        self.tsession = tsession or self.dbi.get_session()
 
     def reverse_complement(self, input_sequence):
         base_pair = {'A': 'T',
@@ -232,7 +241,7 @@ class Plasmid_Utilities(object):
                 'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
 
 
-    def add_part_plasmid_to_db(self, user_input, table_info):
+    def add_part_plasmid_to_db(self, user_input, table_info, auto_commit = True):
         new_plasmid_entry = {'creator': user_input.creator,
                              'plasmid_name': user_input.UID,
                              'plasmid_type': user_input.assembly_type,
@@ -260,7 +269,8 @@ class Plasmid_Utilities(object):
         self.add_features(table_info, current_plasmid_entry)
         self.upload_file(user_input, table_info, current_plasmid_entry)
 
-        self.tsession.commit()
+        if auto_commit:
+            self.tsession.commit()
 
     def add_cassette_plasmid_to_db(self, user_input, table_info):
         new_plasmid_entry = {'creator' : user_input.creator,
