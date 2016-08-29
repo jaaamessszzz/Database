@@ -252,7 +252,7 @@ class Plasmid_Utilities(object):
                              }
 
         current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=True)
-        user_input.database_ID = 'asdf' #Shane's function
+        user_input.database_ID = Plasmid.get_id()
 
         new_part_plasmid_entry = {'creator' : user_input.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
@@ -451,8 +451,8 @@ class Plasmid_Utilities(object):
 
         sequence = SeqRecord( Seq(table_info['Complete Assembly'],
                                   IUPAC.unambiguous_dna),
-                              id=user_input.UID,
-                              name=user_input.UID,
+                              id=user_input.UID or user_input.database_ID,
+                              name=user_input.UID or user_input.database_ID,
                               description=table_info['Complete Description'],
                               features = features_list
                               )
