@@ -46,6 +46,11 @@ class Primers(DeclarativeBasePlasmid):
     template_description = Column(Unicode(200, collation="utf8_bin"), nullable = True)
 
 
+    def get_id(self):
+        '''Return a canonically formatted string to identify the primer in stores e.g. "oJL0023".'''
+        return 'o{0}{1:04d}'.format(self.creator, self.creator_entry_number)
+
+
     @staticmethod
     def add(tsession, d, silent = True):
 
@@ -130,6 +135,12 @@ class Plasmid(DeclarativeBasePlasmid):
     sequence = Column(Text(), nullable=False)
     status = Column(Enum("designed","verified","abandoned"), nullable=False)
     date = Column(TIMESTAMP, nullable=False)
+
+
+    def get_id(self):
+        '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
+        return 'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
+
 
     @staticmethod
     def add(tsession, input_dict, silent=True):
