@@ -203,7 +203,7 @@ class Plasmid_Utilities(object):
           *
         :return:
         '''
-        if user_input.assembly_type == 'Part':
+        if user_input.assembly_type.lower() == 'part':
             if user_input.part_number == '1' or user_input.part_number == '5':
                 assert table_info['Complete Assembly'].count('GAGACG') == 1, \
                     'There should be only one reverse %s site in a Connector Part! Your part %s submission contains %s reverse %s sites.' % (
@@ -225,13 +225,13 @@ class Plasmid_Utilities(object):
                     'BsaI', user_input.UID, table_info['Complete Assembly'].count('GAGACC'), 'BsaI')
 
 
-        if user_input.assembly_type == 'Cassette':
+        if user_input.assembly_type.lower() == 'cassette':
             assert table_info['Complete Assembly'].count('CGTCTC') == 1, \
                 'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('CGTCTC'), 'BsmBI')
             assert table_info['Complete Assembly'].count('GAGACG') == 1, \
                 'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % ('BsmBI', user_input.UID, table_info['Complete Assembly'].count('GAGACG'), 'BsmBI')
 
-        if user_input.assembly_type == 'Multicassette':
+        if user_input.assembly_type.lower() == 'multicassette':
             # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
             assert table_info['Complete Assembly'].count('GGTCTC') == 1, \
                 'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
@@ -252,6 +252,7 @@ class Plasmid_Utilities(object):
                              }
 
         current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=True)
+        user_input.database_ID = 'asdf' #Shane's function
 
         new_part_plasmid_entry = {'creator' : user_input.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
@@ -462,6 +463,38 @@ class Plasmid_Utilities(object):
         return buffy.getvalue()
 
     def generate_mutations(self):
-        pass
+        # E. coli codon table: http://www.sci.sdsu.edu/~smaloy/MicrobialGenetics/topics/in-vitro-genetics/codon-usage.html
+
+        codon_table = {'A' : ['GCG', 'GCC', 'GCA', 'GCT'],
+                       'C' : ['TGC', 'TGT'],
+                       'D' : ['GAT', 'GAC'],
+                       'E' : ['GAA', 'GAG'],
+                       'F' : ['TTT', 'TTC'],
+                       'G' : ['GGC', 'GGT', 'GGG', 'GGA'],
+                       'H' : ['CAT', 'CAC'],
+                       'I' : ['ATT', 'ATC', 'ATA'],
+                       'K' : ['AAA', 'AAG'],
+                       'L' : ['CTG', 'TTA', 'TTG', 'CTT', 'CTC', 'CTA'],
+                       'M' : ['AUG'],
+                       'N' : ['AAC', 'AAT'],
+                       'P' : ['CCG', 'CCA', 'CCT', 'CCC'],
+                       'Q' : ['CAG', 'CAA'],
+                       'R' : ['CGT', 'CGC', 'CGG', 'CGA', 'AGA', 'AGG'],
+                       'S' : ['AGC', 'TCT', 'TCC', 'TCG', 'AGT', 'TCA'],
+                       'T' : ['ACC', 'ACA', 'ACG', 'ACU'],
+                       'V' : ['GTG', 'GTT' ,'GTC', 'GTA'],
+                       'W' : ['TGG'],
+                       'Y' : ['TAT', 'TAC']
+                       }
+
+        # for point_mutant in mutations:
+
+        codon = 'AAG'
+        for AA in codon_table:
+            if codon in codon_table[AA]:
+                print AA
+
+        # Stop Codons TAA, TAG, UGA
+        # Restriction sites GGTCTC/GAGACC and CGTCTC/GAGACG
 
 
