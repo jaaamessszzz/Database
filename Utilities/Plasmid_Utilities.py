@@ -43,6 +43,7 @@ class Plasmid_Utilities(object):
                 raise
         self.tsession = tsession or self.dbi.get_session()
 
+
     def reverse_complement(self, input_sequence):
         base_pair = {'A': 'T',
                      'T': 'A',
@@ -50,6 +51,7 @@ class Plasmid_Utilities(object):
                      'G': 'C'
                      }
         return ''.join(reversed([base_pair[base.upper()] for base in input_sequence]))
+
 
     def primer_match(self, target_sequence):
         '''
@@ -59,8 +61,8 @@ class Plasmid_Utilities(object):
         :return:
         '''
 
-        # Create up the database session
-        dbi = DatabaseInterface()
+        # Create the database session
+        dbi = self.dbi
         tsession = dbi.get_session()
 
         # Create a map from usernames to the database IDs (typically initials)
@@ -193,6 +195,7 @@ class Plasmid_Utilities(object):
 
         return table_info
 
+
     def plasmid_checks(self, table_info, user_input):
         '''
         Verifies that a plasmid conforms to modular cloning sequence standards before entry into database
@@ -242,6 +245,13 @@ class Plasmid_Utilities(object):
 
 
     def add_part_plasmid_to_db(self, user_input, table_info, auto_commit = True):
+        '''
+        :param user_input:
+        :param table_info:
+        :param auto_commit:
+        :return: The created Plasmid object.
+        '''
+
         new_plasmid_entry = {'creator': user_input.creator,
                              'plasmid_name': user_input.UID,
                              'plasmid_type': user_input.assembly_type,
@@ -252,7 +262,7 @@ class Plasmid_Utilities(object):
                              }
 
         current_plasmid_entry = Plasmid.add(self.tsession, new_plasmid_entry, silent=True)
-        user_input.database_ID = Plasmid.get_id()
+        user_input.database_ID = current_plasmid_entry.get_id()
 
         new_part_plasmid_entry = {'creator' : user_input.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
@@ -272,6 +282,9 @@ class Plasmid_Utilities(object):
 
         if auto_commit:
             self.tsession.commit()
+
+        return current_plasmid_entry
+
 
     def add_cassette_plasmid_to_db(self, user_input, table_info):
         new_plasmid_entry = {'creator' : user_input.creator,
