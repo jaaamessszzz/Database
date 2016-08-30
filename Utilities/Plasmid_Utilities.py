@@ -342,6 +342,7 @@ class Plasmid_Utilities(object):
 
         self.tsession.commit()
 
+
     def add_features(self, table_info, current_plasmid_entry):
         features_query = self.tsession.query(Feature, Feature_Type).filter(
             Feature.Feature_type == Feature_Type.Feature_type)
@@ -357,18 +358,20 @@ class Plasmid_Utilities(object):
                               }
                 Plasmid_Feature.add(self.tsession, input_dict)
 
+
     def upload_file(self, user_input, table_info, current_plasmid_entry):
         buffy = self.generate_ape_file(user_input.database_ID, table_info['Complete Assembly'], table_info['Complete Description'])
 
         new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
-                                  'file_name' : '%s.gb' % user_input.UID,
+                                  'file_name' : '%s.gb' % user_input.UID, # or current_plasmid_entry.get_id(),
                                   'file_type' : 'GenBank file',
                                   'Description' : current_plasmid_entry.description,
                                   'File' : buffy
                                   }
 
         Plasmid_File.add(self.tsession, new_plasmid_file_entry, silent=False)
+
 
     def generate_ape_file(self, plasmid_name, compete_assembly, complete_description, mutations = None, mutant_feature_tuple = None):
         features_list = []
@@ -475,8 +478,10 @@ class Plasmid_Utilities(object):
 
         return buffy.getvalue()
 
+
     def add_mutant_to_db(self, tsession, user_mutations):
         pass
+
 
     def mutant_check(self, temp_sequence):
         sequence_pass = True
@@ -486,6 +491,7 @@ class Plasmid_Utilities(object):
                 or 'GAGACG' in temp_sequence:
             sequence_pass = False
         return sequence_pass
+
 
     def generate_mutant_sequence(self, tsession, user_mutations):
         # E. coli codon table: http://www.sci.sdsu.edu/~smaloy/MicrobialGenetics/topics/in-vitro-genetics/codon-usage.html
