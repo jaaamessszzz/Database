@@ -1,6 +1,17 @@
+#!/usr/bin/python2.4
+# encoding: utf-8
+"""
+interface.py
+
+Plasmids database interface code.
+
+Created by Shane O'Connor 2016.
+"""
+
 import os
 import json
 import pprint
+import traceback
 
 import smtplib
 from email.MIMEMultipart import MIMEMultipart
@@ -9,6 +20,7 @@ from email.MIMEText import MIMEText
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine, and_
 
+from klab import colortext
 from klab.fs.fsio import read_file
 from klab.db.sqlalchemy_interface import get_or_create_in_transaction, MySQLSchemaConverter
 
@@ -18,10 +30,11 @@ from model import declarative_base, DBConstants
 
 class DatabaseInterface(object):
 
-    def __init__(self, echo_sql = False, can_email = True):
+    def __init__(self, echo_sql = False, can_email = True, config_file = None):
 
         # Read config
-        config_file = os.path.expanduser('~/.my.cnf.json')
+        if not config_file:
+            config_file = os.path.expanduser('~/.my.cnf.json')
         config = json.loads(read_file(config_file))
         self.config = config
         self.echo_sql = echo_sql
