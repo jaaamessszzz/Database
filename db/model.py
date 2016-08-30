@@ -76,6 +76,8 @@ class Primers(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
 
@@ -150,8 +152,6 @@ class Plasmid(DeclarativeBasePlasmid):
                 if f not in input_dict:
                     input_dict[f] = None
 
-            pprint.pprint(input_dict)
-
             db_record_object = Plasmid(**input_dict)
 
             if not silent:
@@ -161,13 +161,20 @@ class Plasmid(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            # If the user did not specify a plasmid name, use the auto-generated name
+            if not db_record_object.plasmid_name:
+                db_record_object.plasmid_name = db_record_object.get_id()
+            tsession.flush()
+
             return db_record_object
         except:
             raise
 
-    # def __repr__(self):
-    #     return 'Internal numbering: {0} {1}\n' \
-    #           'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
+
+    def __repr__(self):
+        return 'Internal numbering: {0} {1}\n' \
+            'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
 
 ######
 
@@ -194,8 +201,11 @@ class Cassette_Assembly(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
+
 
 class Cassette_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Plasmid'
@@ -222,8 +232,11 @@ class Cassette_Plasmid(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
+
 
 class Feature(DeclarativeBasePlasmid):
     __tablename__ = 'Feature'
@@ -291,11 +304,14 @@ class Part_Plasmid(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
 
     def __repr__(self):
         return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
+
 
 class Part_Plasmid_Part(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid_Part'
@@ -318,6 +334,8 @@ class Part_Plasmid_Part(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
 
@@ -355,6 +373,8 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
 
@@ -384,7 +404,7 @@ class Plasmid_File(DeclarativeBasePlasmid):
     creator = Column(Unicode(5), ForeignKey('Part_Plasmid_Part.creator'), nullable=False)
     file_name = Column(Unicode(100, collation="utf8_bin"), nullable=False)
     file_type = Column(Unicode(100), nullable=False)
-    Description = Column( Text(), nullable=False)
+    Description = Column(Text(), nullable=False)
     File = Column(LONGBLOB(), nullable=False)
 
     @staticmethod
@@ -399,5 +419,11 @@ class Plasmid_File(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            return db_record_object
         except:
             raise
+
+
+    def __repr__(self):
+        return '{0}, type {1}, created by {2}: {3}'.format(self.file_name, self.file_type, self.creator, self.Description)
