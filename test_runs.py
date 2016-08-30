@@ -2,7 +2,8 @@ from Utilities.Plasmid_Utilities import Plasmid_Utilities
 from db.interface import DatabaseInterface
 from db.model import Feature
 
-asdf = Plasmid_Utilities()
+if __name__ == '__main__':
+    asdf = Plasmid_Utilities()
 
 # asdf.primer_match('TATGCCTAGGGCGTTCGGCTGCGGCGAGCGGTATCAGCTCACTCAAAGGCGGTAATACGGTTATCCACAGAATCAGGGGATAACGCAGGAAAGAACATGTGAGCAAAAGGCCAGCAAAAGGCCAGGAACCGTAAAAAGGCCGCGTTGCTGGCGTTTTTCCATAGGCTCCGCCCCCCTGACGAGCATCACAAAAATCGACGCTCAAGTCAGAGGTGGCGAAACCCGACAGGACTATAAAGATACCAGGCGTTTCCCCCTGGAAGCTCCCTCGTGCGCTCTCCTGTTCCGACCCTGCCGCTTACCGGATACCTGTCCGCCTTTCTCCCTTCGGGAAGCGTGGCGCTTTCTCAATGCTCACGCTGTAGGTATCTCAGTTCGGTGTAGGTCGTTCGCTCCAAGCTGGGCTGTGTGCACGAACCCCCCGTTCAGCCCGACCGCTGCGCCTTATCCGGTAACTATCGTCTTGAGTCCAACCCGGTAAGACACGACTTATCGCCACTGGCAGCAGCCACTGGTAACAGGATTAGCAGAGCGAGGTATGTAGGCGGTGCTACAGAGTTCTTGAAGTGGTGGCCTAACTACGGCTACACTAGAAGGACAGTATTTGGTATCTGCGCTCTGCTGAAGCCAGTTACCTTCGGAAAAAGAGTTGGTAGCTCTTGATCCGGCAAACAAACCACCGCTGGTAGCGGTGGTTTTTTTGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACGGGGTCTGACGCTCAGTGGAACGAAAACTCACGTTAAGGGATTTTGGTCATGACTAGTGCTTGGATTCTCACCAATAAAAAACGCCCGGCGGCAACCGAGCGTTCTGAACAAATCCAGATGGAGTTCTGAGGTCATTACTGGATCTATCAACAGGAGTCCAAGCGAGCTCGATATCAAATTACGCCCCGCCCTGCCACTCATCGCAGTACTGTTGTAATTCATTAAGCATTCTGCCGACATGGAAGCCATCACAGACGGCATGATGAACCTGAATCGCCAGCGGCATCAGCACCTTGTCGCCTTGCGTATAATATTTGCCCATGGTGAAAACGGGGGCGAAGAAGTTGTCCATATTGGCCACGTTTAAATCAAAACTGGTGAAACTCACCCAGGGATTGGCTGAGACGAAAAACATATTCTCAATAAACCCTTTAGGGAAATAGGCCAGGTTTTCACCGTAACACGCCACATCTTGCGAATATATGTGTAGAAACTGCCGGAAATCGTCGTGGTATTCACTCCAGAGCGATGAAAACGTTTCAGTTTGCTCATGGAAAACGGTGTAACAAGGGTGAACACTATCCCATATCACCAGCTCACCGTCTTTCATTGCCATACGAAATTCCGGATGAGCATTCATCAGGCGGGCAAGAATGTGAATAAAGGCCGGATAAAACTTGTGCTTATTTTTCTTTACGGTCTTTAAAAAGGCCGTAATATCCAGCTGAACGGTCTGGTTATAGGTACATTGAGCAACTGACTGAAATGCCTCAAAATGTTCTTTACGATGCCATTGGGATATATCAACGGTGGTATATCCAGTGATTTTTTTCTCCATTTTAGCTTCCTTAGCTCCCTGCCCATCTCGATAACTCAAAAAATACGCCCTGTAGTGATCTTATTTCATTATGGTGAAAGTTGGAACCTCTTACGTGCCGATCAACAACGAGCAGGTCTCATTCTGAGGCCGAGCGCGTCCGAGTCTTCCACAAACAGGCCTTCGAGTACATCTCCATTGCCCTGCGCATCGATGAGGATGAGAAAGCAGGACAGAAGGAGCAAGCTGTGGAATGGTATAAGAAAGGTATTGAAGAACTGGAAAAAGGAATAGCTGTTATAGTTACAGGACAAGGTGAACAGTGTGAAAGAGCTAGACGCCTTCAAGCTAAAATGATGACTAATTTGGTTATGGCCAAGGACCGCTTACAACTTCTAGAAtaaATCCtGAGACC')
 
@@ -17,8 +18,9 @@ class user_input(object):
         self.part_description = part_description
 
 # Create up the database session
-dbi = DatabaseInterface()
-tsession = dbi.get_session()
+if __name__ == '__main__':
+    dbi = DatabaseInterface()
+    tsession = dbi.get_session()
 
 # GG_input = user_input('JL',
 #                       ['pAAG28',
@@ -42,55 +44,57 @@ def add_things(asdf):
     # asdf.add_cassette_plasmid_to_db(GG_input, table_info)
     # asdf.add_part_plasmid_to_db(GG_input, table_info)
 
-# Generates Gen9 WT Scaffold part plasmid input for database interactions
-Gen9_Features = tsession.query(Feature).filter(Feature.description.like("%Gen9 WT%"))
+if __name__ == '__main__':
 
-feature_dict = {}
-for Gen9_feature in Gen9_Features:
-    feature_dict[Gen9_feature.Feature_name] = {}
-    feature_dict[Gen9_feature.Feature_name]['Sequence'] = Gen9_feature.Feature_sequence
-    feature_dict[Gen9_feature.Feature_name]['Description'] = Gen9_feature.description
+    # Generates Gen9 WT Scaffold part plasmid input for database interactions
+    Gen9_Features = tsession.query(Feature).filter(Feature.description.like("%Gen9 WT%"))
 
-part_types = {'WT 1F10 Chain 1/B' : ['3a', '3b'],
-              'WT 1F10 Chain 2/H' : ['3a', '3b'],
-              'WT 1F11 Chain 1/A' : ['3b'],
-              'WT 1F11 Chain 2/B' : ['3a', '3b'],
-              'WT 1F12 Chain 1/B' : ['3a'],
-              'WT 1F12 Chain 2/F' : ['3a'],
-              'WT 1G1 Chain 1/B' : ['3a', '3b'],
-              'WT 1G1 Chain 2/C' : ['3a'],
-              'WT 1G2 Chain 1/D' : ['3b'],
-              'WT 1G2 Chain 2/H' : ['3b']
-              }
+    feature_dict = {}
+    for Gen9_feature in Gen9_Features:
+        feature_dict[Gen9_feature.Feature_name] = {}
+        feature_dict[Gen9_feature.Feature_name]['Sequence'] = Gen9_feature.Feature_sequence
+        feature_dict[Gen9_feature.Feature_name]['Description'] = Gen9_feature.description
 
-enum = 3
+    part_types = {'WT 1F10 Chain 1/B' : ['3a', '3b'],
+                  'WT 1F10 Chain 2/H' : ['3a', '3b'],
+                  'WT 1F11 Chain 1/A' : ['3b'],
+                  'WT 1F11 Chain 2/B' : ['3a', '3b'],
+                  'WT 1F12 Chain 1/B' : ['3a'],
+                  'WT 1F12 Chain 2/F' : ['3a'],
+                  'WT 1G1 Chain 1/B' : ['3a', '3b'],
+                  'WT 1G1 Chain 2/C' : ['3a'],
+                  'WT 1G2 Chain 1/D' : ['3b'],
+                  'WT 1G2 Chain 2/H' : ['3b']
+                  }
 
-for part_assembly in feature_dict:
-    for part_type in part_types[part_assembly]:
+    enum = 3
 
-        if part_type == '3a':
-            GG_input = user_input('JL',
-                                  ['gcatCGTCTCaAGCAGGTCTCaTATG' + feature_dict[part_assembly]['Sequence'] + 'GGTAGCGGCAGCGGCAGTTCTtGAGACCtGAGACGgcat'],
-                                  'Part',
-                                  'pJL' + ('0000' + str(enum))[-4:],
-                                  'TEST box #1',
-                                  part_type,
-                                  feature_dict[part_assembly]['Description']
-                                  )
-            add_things(asdf)
-            enum += 1
+    for part_assembly in feature_dict:
+        for part_type in part_types[part_assembly]:
+
+            if part_type == '3a':
+                GG_input = user_input('JL',
+                                      ['gcatCGTCTCaAGCAGGTCTCaTATG' + feature_dict[part_assembly]['Sequence'] + 'GGTAGCGGCAGCGGCAGTTCTtGAGACCtGAGACGgcat'],
+                                      'Part',
+                                      'pJL' + ('0000' + str(enum))[-4:],
+                                      'TEST box #1',
+                                      part_type,
+                                      feature_dict[part_assembly]['Description']
+                                      )
+                add_things(asdf)
+                enum += 1
 
 
-        elif part_type == '3b':
-            GG_input = user_input('JL',
-                                  ['gcatCGTCTCaAGCAGGTCTCATTCT' + feature_dict[part_assembly]['Sequence'] + 'taaATCCtGAGACCtGAGACGgcat'],
-                                  'Part',
-                                  'pJL' + ('0000' + str(enum))[-4:],
-                                  'TEST box #1',
-                                  part_type,
-                                  feature_dict[part_assembly]['Description']
-                                  )
-            add_things(asdf)
-            enum += 1
-        else:
-            print part_type
+            elif part_type == '3b':
+                GG_input = user_input('JL',
+                                      ['gcatCGTCTCaAGCAGGTCTCATTCT' + feature_dict[part_assembly]['Sequence'] + 'taaATCCtGAGACCtGAGACGgcat'],
+                                      'Part',
+                                      'pJL' + ('0000' + str(enum))[-4:],
+                                      'TEST box #1',
+                                      part_type,
+                                      feature_dict[part_assembly]['Description']
+                                      )
+                add_things(asdf)
+                enum += 1
+            else:
+                print part_type
