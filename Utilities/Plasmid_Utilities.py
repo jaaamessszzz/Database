@@ -462,6 +462,9 @@ class Plasmid_Utilities(object):
 
         return buffy.getvalue()
 
+    def add_mutant_to_db(self, tsession, user_mutations):
+        pass
+
     def mutant_check(self, temp_sequence):
         sequence_pass = True
         if 'GGTCTC' in temp_sequence \
@@ -549,18 +552,9 @@ class Plasmid_Utilities(object):
                                     WT_feature_description
                                     )
 
-        print WT_feature_sequence
-
         # Generate plasmid sequence with mutant CDS
         CDS_index_start = WT_plasmid_sequence.find(Actual_WT_feature_sequence)
         Mutant_plasmid_sequence = WT_plasmid_sequence[ : CDS_index_start ] + WT_feature_sequence + WT_plasmid_sequence[ -( len(WT_plasmid_sequence) - (CDS_index_start + len(WT_feature_sequence)) ) : ]
-
-        print WT_plasmid_sequence[ : CDS_index_start ]
-        print '\n'
-        print WT_feature_sequence
-        print '\n'
-        print WT_plasmid_sequence[ -( len(WT_plasmid_sequence) - (CDS_index_start + len(WT_feature_sequence)) ) : ]
-
 
         # Annotate mutant codons
         Mutant_codon_list = []
@@ -581,7 +575,11 @@ class Plasmid_Utilities(object):
                 )
             )
 
-        mutant_genbank_file = self.generate_ape_file((database_ID + '_Mutant'),
+        user_mutations.database_ID = database_ID + '_Mutant'
+        user_mutations.UID = database_ID + '_Mutant'
+        user_mutations.mutant_sequence = Mutant_plasmid_sequence
+
+        mutant_genbank_file = self.generate_ape_file(user_mutations.database_ID,
                                                      Mutant_plasmid_sequence,
                                                      WT_feature_description,
                                                      mutations=Mutant_codon_list,
