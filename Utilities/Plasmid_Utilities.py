@@ -364,7 +364,7 @@ class Plasmid_Utilities(object):
 
         new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
-                                  'file_name' : '%s.gb' % user_input.UID, # or current_plasmid_entry.get_id(),
+                                  'file_name' : '{0}.gb'.format(user_input.UID or current_plasmid_entry.get_id()),
                                   'file_type' : 'GenBank file',
                                   'Description' : current_plasmid_entry.description,
                                   'File' : buffy
