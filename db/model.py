@@ -9,9 +9,27 @@ from sqlalchemy.orm import relationship
 
 # declarative_base instance used for TurboGears integration
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import inspect as sqlalchemy_inspect
+from sqlalchemy import and_, or_, func
 DeclarativeBasePlasmid = declarative_base()
 
 from klab import colortext
+
+
+def row_to_dict(r, keep_relationships = False):
+    '''Converts an SQLAlchemy record to a Python dict. We assume that _sa_instance_state exists and is the only value we do not care about.
+       If DeclarativeBase is passed then all DeclarativeBase objects (e.g. those created by relationships) are also removed.
+    '''
+    d = {}
+    if not keep_relationships:
+        # only returns the table columns
+        t = r.__table__
+        for c in [c.name for c in list(sqlalchemy_inspect(t).columns)]:
+            d[c] = getattr(r, c)
+        return d
+    else:
+        # keeps all objects including those of type DeclarativeBase or InstrumentedList and the _sa_instance_state object
+        return copy.deepcopy(r.__dict__)
 
 
 class DBConstants(DeclarativeBasePlasmid):
@@ -144,6 +162,56 @@ class Plasmid(DeclarativeBasePlasmid):
         return 'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
+    def get_details(self, tsession):
+        '''.'''
+        d = row_to_dict(self)
+
+        # Store the generated ID
+        d['id'] = self.get_id()
+
+        # Add a list to inform the user about errors or inconsistencies in the records
+        d['errors'] = []
+
+        # Rename plasmid_name to match the Primers table
+        d['secondary_id'] = d['plasmid_name']
+        del d['plasmid_name']
+
+        # Retrieve the list of associated files
+        d['files'] = []
+        plasmid_files = tsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == self.creator, Plasmid_File.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_File.file_name)
+        if plasmid_files.count() > 0:
+            for pf in plasmid_files:
+                d['files'].append(pf.get_details(tsession))
+
+        # Retrieve the list of associated features
+        d['features'] = []
+        plasmid_features = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == self.creator, Plasmid_Feature.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_Feature.feature_name)
+        if plasmid_features.count() > 0:
+            for pf in plasmid_features:
+                d['features'].append(pf.get_details(tsession))
+
+        # Retrieve the list of plasmid type-specific details
+        d['details'] = None
+        if self.plasmid_type == 'part':
+            resistance, part_number = None, None
+            try:
+                resistance = tsession.query(Part_Plasmid).filter(and_(Part_Plasmid.creator == self.creator, Part_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
+            except:
+                d['errors'].append('This part plasmid is missing a Part_Plasmid record so the resistance is unknown.')
+            try:
+                part_number = tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number)).one().part_number
+            except:
+                d['errors'].append('This part plasmid is missing a Part_Plasmid_Part record so the part number is unknown.')
+
+            d['details'] = dict(
+                resistance = resistance,
+                part_number = part_number,
+            )
+        d['details'] = d['details'] or {}
+
+        return d
+
+
     @staticmethod
     def add(tsession, input_dict, silent=True):
 
@@ -246,6 +314,18 @@ class Feature(DeclarativeBasePlasmid):
     Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False)
     Feature_sequence = Column(Text(collation="utf8_bin"), nullable=True)
     description = Column(Text(collation="utf8_bin"))
+
+
+    def get_details(self, tsession):
+        color = tsession.query(Feature_Type).filter(Feature_Type.Feature_type == self.Feature_type).one().color
+        return dict(
+                name = self.Feature_name,
+                hash = self.MD5_hash,
+                type = self.Feature_type,
+                sequence = self.Feature_sequence,
+                description = self.description,
+                color = color,
+        )
 
 
 class Feature_Type(DeclarativeBasePlasmid):
@@ -359,7 +439,15 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     ID = Column(Integer, nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, nullable=False)
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
-    feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False)
+    feature_name = Column(Unicode(200, collation="utf8_bin"), ForeignKey('Feature.Feature_name'), nullable=False)
+
+    feature = relationship('Feature', viewonly = True, primaryjoin = "Plasmid_Feature.feature_name==Feature.Feature_name")
+
+
+    def get_details(self, tsession):
+        '''Returns details about a feature.'''
+        return self.feature.get_details(tsession)
+
 
     @staticmethod
     def add(tsession, input_dict, silent=True):
@@ -406,6 +494,23 @@ class Plasmid_File(DeclarativeBasePlasmid):
     file_type = Column(Unicode(100), nullable=False)
     Description = Column(Text(), nullable=False)
     File = Column(LONGBLOB(), nullable=False)
+
+
+    def get_details(self, tsession):
+        '''Returns meta-data about a file.'''
+
+        file_extension = tsession.query(File_Type).filter(File_Type.file_type == self.file_type).one().file_extension
+        return dict(
+            ID = self.ID,
+            creator_entry_number = self.creator_entry_number,
+            creator = self.creator,
+            file_name = self.file_name,
+            file_type = self.file_type,
+            file_extension = file_extension,
+            Description = self.Description,
+            length_in_bytes = len(self.File),
+        )
+
 
     @staticmethod
     def add(tsession, input_dict, silent=True):
