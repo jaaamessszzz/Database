@@ -11,7 +11,7 @@ def add_things(asdf, input_dict, assembly_type, part_type):
     print '\n\n'
     asdf.plasmid_checks( input_dict, assembly_type, part_type )
     # asdf.add_cassette_plasmid_to_db(GG_input, table_info)
-    asdf.add_part_plasmid_to_db(input_dict, part_type)
+    asdf.add_part_plasmid_to_db(input_dict, part_type, auto_commit = False)
 
 # Generates Gen9 WT Scaffold part plasmid input for database interactions
 def generate_part_plasmids(asdf, dbi, tsession):
@@ -129,7 +129,7 @@ def generate_cassette_plasmids(asdf, dbi, tsession):
                   }
 
     asdf.plasmid_checks(input_dict, assembly_type)
-    asdf.add_cassette_plasmid_to_db(input_dict, table_info)
+    asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit = False)
 
 
 def main():
