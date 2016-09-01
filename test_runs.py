@@ -11,7 +11,7 @@ def add_things(asdf, input_dict, assembly_type, part_type):
     print '\n\n'
     asdf.plasmid_checks( input_dict, assembly_type, part_type )
     asdf.add_part_plasmid_to_db(input_dict, part_type, auto_commit=False)
-
+    
 # Generates Gen9 WT Scaffold part plasmid input for database interactions
 def generate_part_plasmids(asdf, dbi, tsession):
     Gen9_Features = tsession.query(Feature).filter(Feature.description.like("%Gen9 WT%"))
@@ -78,6 +78,8 @@ def generate_part_plasmids(asdf, dbi, tsession):
                 #                       part_type,
                 #                       feature_dict[part_types]['Description']
                 #                       )
+                input_sequences = ['gcatCGTCTCaAGCAGGTCTCATTCT' + feature_dict[part_types]['Sequence'] + 'taaATCCtGAGACCtGAGACGgcat']
+                table_info = asdf.golden_gate_assembly(input_sequences, assembly_type)
 
                 input_dict = {'creator': 'JL',
                               'plasmid_name': 'pJL' + ('0000' + str(enum))[-4:],
@@ -127,7 +129,6 @@ def generate_cassette_plasmids(asdf, dbi, tsession):
 
     asdf.plasmid_checks(input_dict, assembly_type)
     asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
-
 
 def main():
 
