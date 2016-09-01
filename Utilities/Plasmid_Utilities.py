@@ -15,6 +15,8 @@ except:
     from kprimers.db.interface import DatabaseInterface
     from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
 
+class Plasmid_Exception(Exception): pass
+
 class Plasmid_Utilities(object):
     '''
     This is a class with modules for completing tasks involving manipulation of Plasmid sequences.
@@ -151,7 +153,8 @@ class Plasmid_Utilities(object):
                     intermediate = intermediate.upper()[:-4] + part.upper()
             assembly_step += 1
 
-        assert intermediate[-4:] == intermediate[:4], 'Incomplete assembly! This assembly does not produce a circular plasmid! :('
+        if intermediate[-4:] != intermediate[:4]:
+            raise Plasmid_Exception('Incomplete assembly! This assembly does not produce a circular plasmid! :(')
 
         table_info['Complete Assembly'] = intermediate[4:].upper()
         table_info['Complete Description'] = ' | '.join(table_info['Description'])
@@ -177,10 +180,10 @@ class Plasmid_Utilities(object):
             print "%s\t%s\t%s\t%s" % (
             plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
 
-            assert plasmid.sequence.count(site_F) == 1, \
-                'There is more than one forward %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
-            assert plasmid.sequence.count(site_R) == 1, \
-                'There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name)
+            if plasmid.sequence.count(site_F) != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name))
+            if plasmid.sequence.count(site_R) != 1:
+                raise Plasmid_Exception('There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name))
 
             sequence_upper = plasmid.sequence.upper()
             site_F_position = sequence_upper.find(part_type.overhang_5, sequence_upper.find(site_F))
@@ -216,40 +219,37 @@ class Plasmid_Utilities(object):
         '''
         if assembly_type.lower() == 'part':
             if part_type == '1' or part_type == '5':
-                assert input_dict['sequence'].count('GAGACG') == 1, \
-                    'There should be only one reverse %s site in a Connector Part! Your part %s submission contains %s reverse %s sites.' % (
-                    'BsmBI', part_type, input_dict['sequence'].count('GAGACG'), 'BsmBI')
+                if input_dict['sequence'].count('GAGACG') != 1:
+                    raise Plasmid_Exception('There should be only one reverse %s site in a Connector Part! Your part %s submission contains %s reverse %s sites.' % (
+                    'BsmBI', part_type, input_dict['sequence'].count('GAGACG'), 'BsmBI'))
             else:
-                assert input_dict['sequence'].count('GAGACG') == 0, \
-                    'There should not be any reverse %s sites in this part type! Your submission %s contains %s reverse %s site(s).' % (
-                        'BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACG'), 'BsmBI')
-            assert input_dict['sequence'].count('CGTCTC') == 0, \
-                'There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
-                    'BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('CGTCTC'), 'BsmBI')
-            # assert table_info['sequence'].count('GGTATCTGCGCTCTGCTGAAGCCAGTTACCTTCGGAAAAAGAGTTGGTAGCTCTTGATCCGGCAAACAAACCACCGCTGGTAGCGGTGGTTTTTTTGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACGGGGTCTGACGCTCAGTGGAACGAAAACTCACGTTAAGGGATTTTGGTCATGACTAGTGCTTGGATTCTCACCAATAAAAAACGCCCGGCGGCAACCGAGCGTTCTGAACAAATCCAGATGGAGTTCTGAGGTCATTACTGGATCTATCAACAGGAGTCCAAGCGAGCTCGATATCAAATTACGCCCCGCCCTGCCACTCATCGCAGTACTGTTGTAATTCATTAAGCATTCTGCCGACATGGAAGCCATCACAAACGGCATGATGAACCTGAATCGCCAGCGGCATCAGCACCTTGTCGCCTTGCGTATAATATTTGCCCATGGTGAAAACGGGGGCGAA') == 0, \
-            #     "You do not need to include the backbone sequence in your submission, we'll take care of that!" # 607-1108 of pAAG16, it's just a rondom section of the backbone that overlaps both the origin and resistance marker
-            assert input_dict['sequence'].count('GGTCTC') == 1, \
-                'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
-                    'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GGTCTC'), 'BsaI')
-            assert input_dict['sequence'].count('GAGACC') == 1, \
-                'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
-                    'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI')
-
+                if input_dict['sequence'].count('GAGACG') != 0:
+                    raise Plasmid_Exception('There should not be any reverse %s sites in this part type! Your submission %s contains %s reverse %s site(s).' % (
+                        'BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACG'), 'BsmBI'))
+            if input_dict['sequence'].count('CGTCTC') != 0:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
+                    'BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('CGTCTC'), 'BsmBI'))
+            if input_dict['sequence'].count('GGTCTC') != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
+                    'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GGTCTC'), 'BsaI'))
+            if input_dict['sequence'].count('GAGACC') != 1:
+                raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
+                    'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
         if assembly_type.lower() == 'cassette':
-            assert input_dict['sequence'].count('CGTCTC') == 1, \
-                'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % ('BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('CGTCTC'), 'BsmBI')
-            assert input_dict['sequence'].count('GAGACG') == 1, \
-                'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % ('BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACG'), 'BsmBI')
+            if input_dict['sequence'].count('CGTCTC') != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % ('BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('CGTCTC'), 'BsmBI'))
+            if input_dict['sequence'].count('GAGACG') != 1:
+                raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % ('BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACG'), 'BsmBI'))
 
         if assembly_type.lower() == 'multicassette':
             # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
-            assert input_dict['sequence'].count('GGTCTC') == 1, \
-                'There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
-                'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GGTCTC'), 'BsaI')
-            assert input_dict['sequence'].count('GAGACC') == 1, \
-                'There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
-                'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI')
+            if input_dict['sequence'].count('GGTCTC') != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
+                'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GGTCTC'), 'BsaI'))
+            if input_dict['sequence'].count('GAGACC') != 1:
+                raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
+                'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
 
     def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = True):
@@ -284,14 +284,9 @@ class Plasmid_Utilities(object):
         return current_plasmid_entry
 
 
-    def add_cassette_plasmid_to_db(self, input_dict, table_info):
+    def add_cassette_plasmid_to_db(self, input_dict, table_info, auto_commit = True):
 
         current_plasmid_entry = Plasmid.add(self.tsession, input_dict, silent=False)
-
-        print '\n\n'
-        print current_plasmid_entry.creator_entry_number
-        print '\n\n'
-
 
         from sqlalchemy import and_
         left_connector = self.tsession.query(Cassette_Connector)\
@@ -330,7 +325,8 @@ class Plasmid_Utilities(object):
         self.add_features(current_plasmid_entry)
         self.upload_file(current_plasmid_entry)
 
-        # self.tsession.commit()
+        if auto_commit:
+            self.tsession.commit()
 
 
     def add_features(self, current_plasmid_entry):
@@ -523,8 +519,8 @@ class Plasmid_Utilities(object):
 
         for point_mutant in user_mutations.mutation_list:
 
-            assert WT_feature_sequence[3 * point_mutant[1] - 3 : -(len(WT_feature_sequence) - 3 * point_mutant[1])] in codon_table[point_mutant[0]], \
-                'User input target codon and sequence codon identities do not match!'
+            if WT_feature_sequence[3 * point_mutant[1] - 3 : -(len(WT_feature_sequence) - 3 * point_mutant[1])] not in codon_table[point_mutant[0]]:
+                raise Plasmid_Exception('User input target codon and sequence codon identities do not match!')
 
             mutant_codon_choices = codon_table[point_mutant[2]]
 
@@ -534,7 +530,8 @@ class Plasmid_Utilities(object):
                     break
                 else:
                     continue
-            assert self.mutant_check(temp_sequence), "No suitable codons were found for %s%s%s! You're going to have to do this one by hand :P" %(point_mutant[0], point_mutant[1], point_mutant[2])
+            if self.mutant_check(temp_sequence) != True:
+                raise Plasmid_Exception("No suitable codons were found for %s%s%s! You're going to have to do this one by hand :P" %(point_mutant[0], point_mutant[1], point_mutant[2]))
 
             WT_feature_sequence = temp_sequence.upper()
 
