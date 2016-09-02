@@ -10,9 +10,8 @@ def add_things(asdf, input_dict, assembly_type, part_type):
     print input_dict['sequence']
     print '\n\n'
     asdf.plasmid_checks( input_dict, assembly_type, part_type )
-    # asdf.add_cassette_plasmid_to_db(GG_input, table_info)
-    asdf.add_part_plasmid_to_db(input_dict, part_type)
-
+    asdf.add_part_plasmid_to_db(input_dict, part_type, auto_commit=False)
+    
 # Generates Gen9 WT Scaffold part plasmid input for database interactions
 def generate_part_plasmids(asdf, dbi, tsession):
     Gen9_Features = tsession.query(Feature).filter(Feature.description.like("%Gen9 WT%"))
@@ -37,7 +36,7 @@ def generate_part_plasmids(asdf, dbi, tsession):
                        )
 
     part_list = collections.OrderedDict(part_types_temp)
-    enum = 3
+    enum = 17
 
     assembly_type = 'part'
 
@@ -79,6 +78,8 @@ def generate_part_plasmids(asdf, dbi, tsession):
                 #                       part_type,
                 #                       feature_dict[part_types]['Description']
                 #                       )
+                input_sequences = ['gcatCGTCTCaAGCAGGTCTCATTCT' + feature_dict[part_types]['Sequence'] + 'taaATCCtGAGACCtGAGACGgcat']
+                table_info = asdf.golden_gate_assembly(input_sequences, assembly_type)
 
                 input_dict = {'creator': 'JL',
                               'plasmid_name': 'pJL' + ('0000' + str(enum))[-4:],
@@ -90,7 +91,7 @@ def generate_part_plasmids(asdf, dbi, tsession):
                               'status': 'designed'
                               }
 
-                add_things(asdf, input_dict, part_type)
+                add_things(asdf, input_dict, assembly_type, part_type)
                 enum += 1
             else:
                 print part_type
@@ -121,14 +122,13 @@ def generate_cassette_plasmids(asdf, dbi, tsession):
                   'plasmid_type': assembly_type,
                   'location': 'Mah box',
                   'description': table_info[
-                                     'Complete Description'] + 'Part plasmids for assembly of N-nano MBP cassette from 2016713',
+                                     'Complete Description'] + ' -- Part plasmids for assembly of N-nano MBP cassette from 2016713',
                   'sequence': table_info['Complete Assembly'],
                   'status': 'designed'
                   }
 
     asdf.plasmid_checks(input_dict, assembly_type)
-    asdf.add_cassette_plasmid_to_db(input_dict, table_info)
-
+    asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
 
 def main():
 
@@ -138,41 +138,15 @@ def main():
             self.mutation_list = mutation_list
 
     asdf = Plasmid_Utilities()
-    # asdf.primer_match('TATGCCTAGGGCGTTCGGCTGCGGCGAGCGGTATCAGCTCACTCAAAGGCGGTAATACGGTTATCCACAGAATCAGGGGATAACGCAGGAAAGAACATGTGAGCAAAAGGCCAGCAAAAGGCCAGGAACCGTAAAAAGGCCGCGTTGCTGGCGTTTTTCCATAGGCTCCGCCCCCCTGACGAGCATCACAAAAATCGACGCTCAAGTCAGAGGTGGCGAAACCCGACAGGACTATAAAGATACCAGGCGTTTCCCCCTGGAAGCTCCCTCGTGCGCTCTCCTGTTCCGACCCTGCCGCTTACCGGATACCTGTCCGCCTTTCTCCCTTCGGGAAGCGTGGCGCTTTCTCAATGCTCACGCTGTAGGTATCTCAGTTCGGTGTAGGTCGTTCGCTCCAAGCTGGGCTGTGTGCACGAACCCCCCGTTCAGCCCGACCGCTGCGCCTTATCCGGTAACTATCGTCTTGAGTCCAACCCGGTAAGACACGACTTATCGCCACTGGCAGCAGCCACTGGTAACAGGATTAGCAGAGCGAGGTATGTAGGCGGTGCTACAGAGTTCTTGAAGTGGTGGCCTAACTACGGCTACACTAGAAGGACAGTATTTGGTATCTGCGCTCTGCTGAAGCCAGTTACCTTCGGAAAAAGAGTTGGTAGCTCTTGATCCGGCAAACAAACCACCGCTGGTAGCGGTGGTTTTTTTGTTTGCAAGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACGGGGTCTGACGCTCAGTGGAACGAAAACTCACGTTAAGGGATTTTGGTCATGACTAGTGCTTGGATTCTCACCAATAAAAAACGCCCGGCGGCAACCGAGCGTTCTGAACAAATCCAGATGGAGTTCTGAGGTCATTACTGGATCTATCAACAGGAGTCCAAGCGAGCTCGATATCAAATTACGCCCCGCCCTGCCACTCATCGCAGTACTGTTGTAATTCATTAAGCATTCTGCCGACATGGAAGCCATCACAGACGGCATGATGAACCTGAATCGCCAGCGGCATCAGCACCTTGTCGCCTTGCGTATAATATTTGCCCATGGTGAAAACGGGGGCGAAGAAGTTGTCCATATTGGCCACGTTTAAATCAAAACTGGTGAAACTCACCCAGGGATTGGCTGAGACGAAAAACATATTCTCAATAAACCCTTTAGGGAAATAGGCCAGGTTTTCACCGTAACACGCCACATCTTGCGAATATATGTGTAGAAACTGCCGGAAATCGTCGTGGTATTCACTCCAGAGCGATGAAAACGTTTCAGTTTGCTCATGGAAAACGGTGTAACAAGGGTGAACACTATCCCATATCACCAGCTCACCGTCTTTCATTGCCATACGAAATTCCGGATGAGCATTCATCAGGCGGGCAAGAATGTGAATAAAGGCCGGATAAAACTTGTGCTTATTTTTCTTTACGGTCTTTAAAAAGGCCGTAATATCCAGCTGAACGGTCTGGTTATAGGTACATTGAGCAACTGACTGAAATGCCTCAAAATGTTCTTTACGATGCCATTGGGATATATCAACGGTGGTATATCCAGTGATTTTTTTCTCCATTTTAGCTTCCTTAGCTCCCTGCCCATCTCGATAACTCAAAAAATACGCCCTGTAGTGATCTTATTTCATTATGGTGAAAGTTGGAACCTCTTACGTGCCGATCAACAACGAGCAGGTCTCATTCTGAGGCCGAGCGCGTCCGAGTCTTCCACAAACAGGCCTTCGAGTACATCTCCATTGCCCTGCGCATCGATGAGGATGAGAAAGCAGGACAGAAGGAGCAAGCTGTGGAATGGTATAAGAAAGGTATTGAAGAACTGGAAAAAGGAATAGCTGTTATAGTTACAGGACAAGGTGAACAGTGTGAAAGAGCTAGACGCCTTCAAGCTAAAATGATGACTAATTTGGTTATGGCCAAGGACCGCTTACAACTTCTAGAAtaaATCCtGAGACC')
 
     # Create up the database session
     dbi = DatabaseInterface()
     tsession = dbi.get_session()
 
     generate_cassette_plasmids(asdf, dbi, tsession)
+    generate_part_plasmids(asdf, dbi, tsession)
 
-    # creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
-    # creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    # plasmid_name = Column(Unicode(100, collation="utf8_bin"), nullable=True, unique=True)
-    # plasmid_type = Column(Enum("part", "cassette", "multicassette", "other"), nullable=False)
-    # location = Column(Unicode(250, collation="utf8_bin"), nullable=False)
-    # description = Column(Text(), nullable=False)
-    # sequence = Column(Text(), nullable=False)
-    # status = Column(Enum("designed", "verified", "abandoned"), nullable=False)
-    # date = Column(TIMESTAMP, nullable=False)
-
-    # GG_input = Plasmid('JL',
-    #                       ['pAAG28',
-    #                        'ASDF',
-    #                        'pAAG54',
-    #                        'pAAG70',
-    #                        'pAAG22',
-    #                        'pAAG31',
-    #                        'pAAG24',
-    #                        'pAAG26'
-    #                        ],
-    #                       'Cassette',
-    #                       'pJL0000',
-    #                       'BUFU'
-    #                       )
-
-    user_mutations = make_mutations(17, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')])
-
+    user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
     asdf.generate_mutant_sequence(tsession, user_mutations)
 
 if __name__ == '__main__':

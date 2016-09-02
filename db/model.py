@@ -223,13 +223,13 @@ class Plasmid(DeclarativeBasePlasmid):
 
             db_record_object = Plasmid(**input_dict)
 
+            tsession.add(db_record_object)
+            tsession.flush()
+
             if not silent:
                 colortext.pcyan('Adding this record:')
                 print(db_record_object)
                 print('')
-
-            tsession.add(db_record_object)
-            tsession.flush()
 
             # If the user did not specify a plasmid name, use the auto-generated name
             if not db_record_object.plasmid_name:
