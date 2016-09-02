@@ -157,6 +157,10 @@ class Plasmid_Utilities(object):
             raise Plasmid_Exception('Incomplete assembly! This assembly does not produce a circular plasmid! :(')
 
         table_info['Complete Assembly'] = intermediate[4:].upper()
+
+        # DEBUGGING
+        # print table_info['Complete Assembly']
+
         table_info['Complete Description'] = ' | '.join(table_info['Description'])
 
         return table_info
@@ -177,33 +181,66 @@ class Plasmid_Utilities(object):
 
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
+            already_fetched_cassettes = []
+
             print "%s\t%s\t%s\t%s" % (
             plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
 
-            if plasmid.sequence.count(site_F) != 1:
-                raise Plasmid_Exception('There is more than one forward %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name))
-            if plasmid.sequence.count(site_R) != 1:
+            sequence_upper = plasmid.sequence.upper()
+
+            if sequence_upper.count(site_F) != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! %s' % (restriction_enzyme, plasmid.plasmid_name, plasmid.sequence.count(site_F)))
+            if sequence_upper.count(site_R) != 1:
                 raise Plasmid_Exception('There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name))
 
-            sequence_upper = plasmid.sequence.upper()
-            site_F_position = sequence_upper.find(part_type.overhang_5, sequence_upper.find(site_F))
-            site_R_position = sequence_upper.find(part_type.overhang_3, sequence_upper.find(site_R) - 10) + 4
+            left_overhang = part_type.overhang_5
+            right_overhang = part_type.overhang_3
 
-            # Circular permutation so that forward cut site is alway upstream of reverse cut site in linear sequence
+            # check if a part plasmid has multiple part plasmid parts - will select the correct 5' and 3' overhangs
+            if part_plasmids_query.filter( Plasmid.creator == plasmid.creator).filter(Plasmid.creator_entry_number == plasmid.creator_entry_number).count() > 1:
+                left_overhangs = set()
+                right_overhangs = set()
+
+                for p, pp, ppp, pt in part_plasmids_query.filter( Plasmid.creator == plasmid.creator).filter(Plasmid.creator_entry_number == plasmid.creator_entry_number):
+                    left_overhangs.add(pt.overhang_5)
+                    right_overhangs.add(pt.overhang_3)
+
+                leftoverhangs = left_overhangs.symmetric_difference(right_overhangs) # Leftover overhangs? Get it?
+
+                for p, pp, ppp, pt in part_plasmids_query.filter(Plasmid.creator == plasmid.creator).filter(Plasmid.creator_entry_number == plasmid.creator_entry_number):
+                    if pt.overhang_5 in leftoverhangs:
+                        left_overhang = pt.overhang_5
+                    if pt.overhang_3 in leftoverhangs:
+                        right_overhang = pt.overhang_3
+
+                print left_overhang
+                print right_overhang
+
+            site_F_position = sequence_upper.find(left_overhang, sequence_upper.find(site_F))
+            site_R_position = sequence_upper.find(right_overhang, sequence_upper.find(site_R) - 10) + 4
+
+            # Circular permutation so that forward cut site is always upstream of reverse cut site in linear sequence
             if site_F_position > site_R_position:
-                sequence_upper = sequence_upper[site_R_position + 7:] + sequence_upper[:site_R_position + 7]
+                sequence_upper = sequence_upper[site_R_position + 8:] + sequence_upper[:site_R_position + 8]
 
-            table_info['Part list'].append(sequence_upper[
-                                           sequence_upper.find(part_type.overhang_5, sequence_upper.find(site_F)):
-                                           sequence_upper.find(part_type.overhang_3,
-                                                               sequence_upper.find(site_R) - 10) + 4
-                                           ])
-            table_info['Description'].append(plasmid.description)
-            table_info['Part list ID'].append(
-                (part_plasmid_part.part_number, plasmid.creator, plasmid.creator_entry_number))
-            if part_plasmid_part.part_number == '1' or part_plasmid_part.part_number == '5':
-                table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
-                                                                           plasmid.creator_entry_number]
+            if (plasmid.creator, plasmid.creator_entry_number) not in already_fetched_cassettes:
+                table_info['Part list'].append(sequence_upper[
+                                               sequence_upper.find(left_overhang, sequence_upper.find(site_F)):
+                                               sequence_upper.find(right_overhang,
+                                                                   sequence_upper.find(site_R) - 10) + 4
+                                               ])
+                table_info['Description'].append(plasmid.description)
+                table_info['Part list ID'].append(
+                    (part_plasmid_part.part_number, plasmid.creator, plasmid.creator_entry_number))
+                if part_plasmid_part.part_number == '1' or part_plasmid_part.part_number == '5':
+                    table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
+                                                                               plasmid.creator_entry_number]
+                already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
+
+            # if plasmid.plasmid_name == 'pAAG87':
+            #     print sequence_upper
+            #     import pprint
+            #     pprint.pprint(table_info['Part list'])
 
         return table_info
 
@@ -237,10 +274,19 @@ class Plasmid_Utilities(object):
                     'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
         if assembly_type.lower() == 'cassette':
-            if input_dict['sequence'].count('CGTCTC') != 1:
-                raise Plasmid_Exception('There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % ('BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('CGTCTC'), 'BsmBI'))
-            if input_dict['sequence'].count('GAGACG') != 1:
-                raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % ('BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACG'), 'BsmBI'))
+            if input_dict['sequence'].count('GGTCTC') != 0:
+                raise Plasmid_Exception('There are BsaI sites in your completed cassette assembly! This thing is going to get wrecked during the final digestion step of the Golden Gate Assembly!')
+            if input_dict['sequence'].count('GAGACC') != 0:
+                raise Plasmid_Exception('There are BsaI sites in your completed cassette assembly! This thing is going to get wrecked during the final digestion step of the Golden Gate Assembly!')
+
+            # I need to implement more complicated logic when checking for cassete connector sites in cassette assemblies
+            # It looks like LS contains a forward BsmBI site and all other connectors have a reverse BsmBI site...
+            # Not going to deal with that right now...
+
+            # if input_dict['sequence'].count('CGTCTC') != 0:
+            #     raise Plasmid_Exception('Your submission contains %s forward %s sites. There should be none!' % ( input_dict['sequence'].count('CGTCTC'), 'BsmBI'))
+            # if input_dict['sequence'].count('GAGACG') != 2:
+            #     raise Plasmid_Exception('There should only be two reverse %s sites in a cassette assembly. Your submission contains %s reverse %s sites.' % ('BsmBI', input_dict['sequence'].count('GAGACG'), 'BsmBI'))
 
         if assembly_type.lower() == 'multicassette':
             # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
@@ -593,6 +639,19 @@ class Plasmid_Utilities(object):
 
         with open('Mutant_GenBank_Test.gb', 'w+b') as file:
             file.write(mutant_genbank_file)
+
+    def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
+        my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number)
+        database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
+        genbank_file = self.generate_ape_file(self, database_ID, Plasmid.sequence, Plasmid.description)
+
+        if write_to_file == True:
+            with open('%.gb' % database_ID, 'w+b') as file:
+                file.write(genbank_file)
+
+        return  genbank_file
+
+
 
 
 
