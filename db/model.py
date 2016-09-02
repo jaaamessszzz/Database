@@ -14,6 +14,7 @@ from sqlalchemy import and_, or_, func
 DeclarativeBasePlasmid = declarative_base()
 
 from klab import colortext
+from klab.bio.basics import translate_codons
 
 
 def row_to_dict(r, keep_relationships = False):
@@ -318,11 +319,19 @@ class Feature(DeclarativeBasePlasmid):
 
     def get_details(self, tsession):
         color = tsession.query(Feature_Type).filter(Feature_Type.Feature_type == self.Feature_type).one().color
+
+        protein_sequence_translation = None
+        try:
+            if len(self.Feature_sequence) % 3 == 0:
+                protein_sequence_translation = translate_codons(self.Feature_sequence)
+        except: pass
+
         return dict(
                 name = self.Feature_name,
                 hash = self.MD5_hash,
                 type = self.Feature_type,
                 sequence = self.Feature_sequence,
+                protein_sequence = protein_sequence_translation,
                 description = self.description,
                 color = color,
         )
@@ -481,6 +490,8 @@ class File_Type(DeclarativeBasePlasmid):
 
     file_type = Column(Unicode(100), nullable=False, primary_key=True)
     file_extension = Column(String(16), nullable = True)
+    color = Column(String(6), nullable = False)
+
 
 class Plasmid_File(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid_File'
@@ -499,7 +510,11 @@ class Plasmid_File(DeclarativeBasePlasmid):
     def get_details(self, tsession):
         '''Returns meta-data about a file.'''
 
-        file_extension = tsession.query(File_Type).filter(File_Type.file_type == self.file_type).one().file_extension
+        # todo: For readability, I should really be defining relationships above and using them here
+        ft = tsession.query(File_Type).filter(File_Type.file_type == self.file_type).one()
+        file_extension = ft.file_extension
+        file_color = ft.color
+
         return dict(
             ID = self.ID,
             creator_entry_number = self.creator_entry_number,
@@ -509,6 +524,7 @@ class Plasmid_File(DeclarativeBasePlasmid):
             file_extension = file_extension,
             Description = self.Description,
             length_in_bytes = len(self.File),
+            color = file_color,
         )
 
 
