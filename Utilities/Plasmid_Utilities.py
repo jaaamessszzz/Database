@@ -407,7 +407,7 @@ class Plasmid_Utilities(object):
         Plasmid_File.add(self.tsession, new_plasmid_file_entry, silent=False)
 
 
-    def generate_ape_file(self, plasmid_name, compete_assembly, complete_description, mutations = None, mutant_feature_tuple = None):
+    def generate_ape_file(self, plasmid_name, complete_assembly, complete_description, mutations = None, mutant_feature_tuple = None):
         features_list = []
         features_query = self.tsession.query(Feature, Feature_Type).filter(Feature.Feature_type == Feature_Type.Feature_type)
         possible_features = [(record.Feature_name, record.Feature_type, record.Feature_sequence, color.color, record.description) for record, color in features_query]
@@ -422,7 +422,7 @@ class Plasmid_Utilities(object):
         for site in possible_features:
             target = site[2].upper()
             #Find forward sequences from features database
-            if compete_assembly.find(target) != -1:
+            if complete_assembly.find(target) != -1:
                 # Treat type II restriction enzymes as special cases
                 if site[1] == 'Restrxn Type II':
                     # Forward Restriction Site
@@ -430,8 +430,8 @@ class Plasmid_Utilities(object):
                         SeqFeature(
                             CompoundLocation(
                                 [
-                                    FeatureLocation(compete_assembly.find(target),compete_assembly.find(target) + len(target)),
-                                    FeatureLocation(compete_assembly.find(target) + 7, compete_assembly.find(target) + 11)
+                                    FeatureLocation(complete_assembly.find(target),complete_assembly.find(target) + len(target)),
+                                    FeatureLocation(complete_assembly.find(target) + 7, complete_assembly.find(target) + 11)
                                 ]
                             ),
                             type = site[1],
@@ -449,8 +449,8 @@ class Plasmid_Utilities(object):
                             SeqFeature(
                                 CompoundLocation(
                                     [
-                                        FeatureLocation(compete_assembly.find(self.reverse_complement(target)),compete_assembly.find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
-                                        FeatureLocation(compete_assembly.find(self.reverse_complement(target)) - 5, compete_assembly.find(self.reverse_complement(target)) - 1)
+                                        FeatureLocation(complete_assembly.find(self.reverse_complement(target)),complete_assembly.find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
+                                        FeatureLocation(complete_assembly.find(self.reverse_complement(target)) - 5, complete_assembly.find(self.reverse_complement(target)) - 1)
                                     ]
                                 ),
                                 type = site[1],
@@ -466,7 +466,7 @@ class Plasmid_Utilities(object):
                 else:
                     features_list.append(
                         SeqFeature(
-                            FeatureLocation(compete_assembly.find(target), compete_assembly.find(target) + len(target)),
+                            FeatureLocation(complete_assembly.find(target), complete_assembly.find(target) + len(target)),
                             type=site[1],
                             strand=1,
                             qualifiers={"label": site[0],
@@ -478,14 +478,14 @@ class Plasmid_Utilities(object):
                         )
                     )
 
-            if compete_assembly.find(self.reverse_complement(target)) != -1:
+            if complete_assembly.find(self.reverse_complement(target)) != -1:
                 if site[1] == 'Restrxn Type II':
                     pass
                 else:
                     features_list.append(
                         SeqFeature(
-                            FeatureLocation(compete_assembly.find(self.reverse_complement(target)),
-                                            compete_assembly.find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
+                            FeatureLocation(complete_assembly.find(self.reverse_complement(target)),
+                                            complete_assembly.find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
                             type=site[1],
                             strand=-1,
                             qualifiers={"label": site[1],
@@ -501,7 +501,7 @@ class Plasmid_Utilities(object):
             for mutation in mutations:
                 features_list.append(mutation)
 
-        sequence = SeqRecord( Seq(compete_assembly,
+        sequence = SeqRecord( Seq(complete_assembly,
                                   IUPAC.unambiguous_dna),
                               id=plasmid_name,
                               name=plasmid_name,
@@ -644,12 +644,23 @@ class Plasmid_Utilities(object):
         with open('Mutant_GenBank_Test.gb', 'w+b') as file:
             file.write(mutant_genbank_file)
 
+
     def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
+<<<<<<< HEAD
         my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number)
 
         for plasmid in my_plasmid:
             database_ID = 'p%s%s' %(plasmid.creator, ('0000' + str(plasmid.creator_entry_number))[-4:])
             genbank_file = self.generate_ape_file(database_ID, plasmid.sequence.upper(), plasmid.description)
+||||||| merged common ancestors
+        my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number)
+        database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
+        genbank_file = self.generate_ape_file(self, database_ID, Plasmid.sequence, Plasmid.description)
+=======
+        my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
+        database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
+        genbank_file = self.generate_ape_file(database_ID, Plasmid.sequence, Plasmid.description)
+>>>>>>> 0e0e39394001bf79437e144a893fddd4adc1e0f5
 
         if write_to_file == True:
             with open('{0}.gb'.format(database_ID), 'w+b') as file:
