@@ -7,6 +7,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 from Bio.Alphabet import IUPAC
 
 sys.path.insert(0, '..')
+
 try:
     from db.interface import DatabaseInterface
     from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
@@ -31,6 +32,7 @@ class Plasmid_Utilities(object):
     * Generate annotated .ape files based on desired sequence features
     * Upload assembled plasmids to the database (part and cassette plasmids implemented)
     * Storing information for mutations and libraries
+    * Generate mutant sequences for plasmid features and associated .ape file
 
     ###########################
     # Planned Funtionality:   #
@@ -414,6 +416,9 @@ class Plasmid_Utilities(object):
         if mutant_feature_tuple != None:
             possible_features.append(mutant_feature_tuple)
 
+        import pprint
+        pprint.pprint(possible_features)
+
         for site in possible_features:
             target = site[2].upper()
             #Find forward sequences from features database
@@ -491,7 +496,6 @@ class Plasmid_Utilities(object):
                                         }
                         )
                     )
-
 
         if mutations != None:
             for mutation in mutations:
@@ -642,14 +646,16 @@ class Plasmid_Utilities(object):
 
     def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
         my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number)
-        database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
-        genbank_file = self.generate_ape_file(self, database_ID, Plasmid.sequence, Plasmid.description)
+
+        for plasmid in my_plasmid:
+            database_ID = 'p%s%s' %(plasmid.creator, ('0000' + str(plasmid.creator_entry_number))[-4:])
+            genbank_file = self.generate_ape_file(database_ID, plasmid.sequence.upper(), plasmid.description)
 
         if write_to_file == True:
-            with open('%.gb' % database_ID, 'w+b') as file:
+            with open('{0}.gb'.format(database_ID), 'w+b') as file:
                 file.write(genbank_file)
 
-        return  genbank_file
+        return genbank_file
 
 
 
