@@ -647,7 +647,7 @@ class Plasmid_Utilities(object):
 
     def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
         my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
-        database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
+        database_ID = my_plasmid.get_id()
         genbank_file = self.generate_ape_file(database_ID, Plasmid.sequence, Plasmid.description)
 
         if write_to_file == True:
