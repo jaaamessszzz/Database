@@ -646,21 +646,9 @@ class Plasmid_Utilities(object):
 
 
     def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
-<<<<<<< HEAD
-        my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number)
-
-        for plasmid in my_plasmid:
-            database_ID = 'p%s%s' %(plasmid.creator, ('0000' + str(plasmid.creator_entry_number))[-4:])
-            genbank_file = self.generate_ape_file(database_ID, plasmid.sequence.upper(), plasmid.description)
-||||||| merged common ancestors
-        my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number)
-        database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
-        genbank_file = self.generate_ape_file(self, database_ID, Plasmid.sequence, Plasmid.description)
-=======
         my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
         database_ID = 'p%s%s' %(my_plasmid.creator, ('0000' + str(my_plasmid.creator_entry_number))[-4:])
         genbank_file = self.generate_ape_file(database_ID, Plasmid.sequence, Plasmid.description)
->>>>>>> 0e0e39394001bf79437e144a893fddd4adc1e0f5
 
         if write_to_file == True:
             with open('{0}.gb'.format(database_ID), 'w+b') as file:
