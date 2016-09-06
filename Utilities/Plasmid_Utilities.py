@@ -419,6 +419,9 @@ class Plasmid_Utilities(object):
         import pprint
         pprint.pprint(possible_features)
 
+        print('*' * 100)
+        print(plasmid_name, complete_assembly, complete_description)
+
         for site in possible_features:
             target = site[2].upper()
             #Find forward sequences from features database
@@ -648,7 +651,7 @@ class Plasmid_Utilities(object):
     def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
         my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
         database_ID = my_plasmid.get_id()
-        genbank_file = self.generate_ape_file(database_ID, Plasmid.sequence, Plasmid.description)
+        genbank_file = self.generate_ape_file(database_ID, my_plasmid.sequence, my_plasmid.description)
 
         if write_to_file == True:
             with open('{0}.gb'.format(database_ID), 'w+b') as file:
