@@ -144,10 +144,10 @@ def main():
     tsession = dbi.get_session()
 
     generate_cassette_plasmids(asdf, dbi, tsession)
-    generate_part_plasmids(asdf, dbi, tsession)
+    # generate_part_plasmids(asdf, dbi, tsession)
 
-    user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
-    asdf.generate_mutant_sequence(tsession, user_mutations)
+    # user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
+    # asdf.generate_mutant_sequence(tsession, user_mutations)
 
 if __name__ == '__main__':
     main()
