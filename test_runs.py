@@ -104,31 +104,30 @@ def generate_part_plasmids(asdf, dbi, tsession):
 
 def generate_cassette_plasmids(asdf, dbi, tsession):
     input_sequences = ['pAAG28',
-                       'ASDF',
-                       'pAAG54',
-                       'pAAG70',
+                       'pAAG67',
+                       'pJL0003',
+                       'pAAG52',
                        'pAAG22',
                        'pAAG31',
-                       'pAAG24',
-                       'pAAG26'
-                       ] # Part plasmids for assembly of N-nano MBP cassette from 2016713
+                       'pAAG87'
+                       ]
 
     assembly_type = 'cassette'
 
     table_info = asdf.golden_gate_assembly(input_sequences, assembly_type)
 
     input_dict = {'creator': 'JL',
-                  'plasmid_name': 'pJLXXXX',
+                  'plasmid_name': 'pJL0017',
                   'plasmid_type': assembly_type,
                   'location': 'Mah box',
                   'description': table_info[
-                                     'Complete Description'] + ' -- Part plasmids for assembly of N-nano MBP cassette from 2016713',
+                                     'Complete Description'],
                   'sequence': table_info['Complete Assembly'],
                   'status': 'designed'
                   }
 
     asdf.plasmid_checks(input_dict, assembly_type)
-    asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
+    asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=True)
 
 def main():
 
@@ -143,11 +142,13 @@ def main():
     dbi = DatabaseInterface()
     tsession = dbi.get_session()
 
-    generate_cassette_plasmids(asdf, dbi, tsession)
-    generate_part_plasmids(asdf, dbi, tsession)
+    asdf.generate_ape_from_database_ID(tsession, 'AG', '3', write_to_file=True)
 
-    user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
-    asdf.generate_mutant_sequence(tsession, user_mutations)
+    # generate_cassette_plasmids(asdf, dbi, tsession)
+    # generate_part_plasmids(asdf, dbi, tsession)
+
+    # user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
+    # asdf.generate_mutant_sequence(tsession, user_mutations)
 
 if __name__ == '__main__':
     main()
