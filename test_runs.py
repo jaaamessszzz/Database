@@ -142,13 +142,23 @@ def main():
     dbi = DatabaseInterface()
     tsession = dbi.get_session()
 
+
     asdf.generate_ape_from_database_ID(tsession, 'AG', '3', write_to_file=True)
+    # generate_cassette_plasmids(asdf, dbi, tsession)
+    # generate_part_plasmids(asdf, dbi, tsession)
 
     # generate_cassette_plasmids(asdf, dbi, tsession)
     # generate_part_plasmids(asdf, dbi, tsession)
 
     # user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
     # asdf.generate_mutant_sequence(tsession, user_mutations)
+||||||| merged common ancestors
+    user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
+    asdf.generate_mutant_sequence(tsession, user_mutations)
+=======
+    # user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
+    # asdf.generate_mutant_sequence(tsession, user_mutations)
+>>>>>>> a4f87e304bae53313046458d177667a5bd316c59
 
 if __name__ == '__main__':
     main()
