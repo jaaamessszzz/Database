@@ -10,11 +10,11 @@ sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
-    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
-    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
 
 class Plasmid_Exception(Exception): pass
 
@@ -385,7 +385,7 @@ class Plasmid_Utilities(object):
             record, color in features_query]
         for site in possible_features:
             target = site[2].upper()
-            if current_plasmid_entry.sequence.find(target) != -1:
+            if current_plasmid_entry.sequence.find(target) != -1 or current_plasmid_entry.sequence.find(self.reverse_complement(target)) != -1:
                 input_dict = {'creator' : current_plasmid_entry.creator,
                               'creator_entry_number' : current_plasmid_entry.creator_entry_number,
                               'feature_name' : site[0]
@@ -422,7 +422,6 @@ class Plasmid_Utilities(object):
             if complete_assembly.find(target) != -1:
                 # Treat type II restriction enzymes as special cases
                 if site[1] == 'Restrxn Type II':
-                    # Forward Restriction Site
                     features_list.append(
                         SeqFeature(
                             CompoundLocation(
@@ -441,25 +440,6 @@ class Plasmid_Utilities(object):
                                           }
                         )
                     )
-                    # Reverse Restriction Site
-                    features_list.append(
-                            SeqFeature(
-                                CompoundLocation(
-                                    [
-                                        FeatureLocation(complete_assembly.find(self.reverse_complement(target)),complete_assembly.find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
-                                        FeatureLocation(complete_assembly.find(self.reverse_complement(target)) - 5, complete_assembly.find(self.reverse_complement(target)) - 1)
-                                    ]
-                                ),
-                                type = site[1],
-                                strand = -1,
-                                qualifiers = {"label": site[0],
-                                              "ApEinfo_label": site[0],
-                                              "ApEinfo_fwdcolor": site[3],
-                                              "ApEinfo_revcolor":site[3],
-                                              "ApEinfo_graphicformat":"arrow_data {{0 1 2 0 0 -1} {} 0}"
-                                              }
-                            )
-                        )
                 else:
                     features_list.append(
                         SeqFeature(
@@ -477,7 +457,27 @@ class Plasmid_Utilities(object):
 
             if complete_assembly.find(self.reverse_complement(target)) != -1:
                 if site[1] == 'Restrxn Type II':
-                    pass
+                    features_list.append(
+                        SeqFeature(
+                            CompoundLocation(
+                                [
+                                    FeatureLocation(complete_assembly.find(self.reverse_complement(target)),
+                                                    complete_assembly.find(self.reverse_complement(target)) + len(
+                                                        self.reverse_complement(target))),
+                                    FeatureLocation(complete_assembly.find(self.reverse_complement(target)) - 5,
+                                                    complete_assembly.find(self.reverse_complement(target)) - 1)
+                                ]
+                            ),
+                            type=site[1],
+                            strand=-1,
+                            qualifiers={"label": site[0],
+                                        "ApEinfo_label": site[0],
+                                        "ApEinfo_fwdcolor": site[3],
+                                        "ApEinfo_revcolor": site[3],
+                                        "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                        }
+                        )
+                    )
                 else:
                     features_list.append(
                         SeqFeature(
@@ -512,10 +512,6 @@ class Plasmid_Utilities(object):
         return buffy.getvalue()
 
 
-    def add_mutant_to_db(self, tsession, user_mutations):
-        pass
-
-
     def mutant_check(self, temp_sequence):
         sequence_pass = True
         if 'GGTCTC' in temp_sequence \
@@ -526,7 +522,7 @@ class Plasmid_Utilities(object):
         return sequence_pass
 
 
-    def generate_mutant_sequence(self, tsession, user_mutations):
+    def generate_mutant_sequence(self, Plasmid_Feature_ID, mutation_list, write_to_file = False):
         # E. coli codon table: http://www.sci.sdsu.edu/~smaloy/MicrobialGenetics/topics/in-vitro-genetics/codon-usage.html
 
         codon_table = {'A' : ['GCG', 'GCC', 'GCA', 'GCT'],
@@ -551,7 +547,7 @@ class Plasmid_Utilities(object):
                        'Y' : ['TAT', 'TAC']
                        }
 
-        feature_query = tsession.query(Plasmid_Feature, Feature).filter(Plasmid_Feature.ID == user_mutations.Plasmid_Feature_ID).filter(Plasmid_Feature.feature_name == Feature.Feature_name )
+        feature_query = self.tsession.query(Plasmid_Feature, Feature).filter(Plasmid_Feature.ID == Plasmid_Feature_ID).filter(Plasmid_Feature.feature_name == Feature.Feature_name )
 
         for plasmid_feature, feature in feature_query:
             Actual_WT_feature_sequence = feature.Feature_sequence
@@ -563,8 +559,8 @@ class Plasmid_Utilities(object):
             # print feature.Feature_type
             # print feature.Feature_sequence
 
-
-        for point_mutant in user_mutations.mutation_list:
+        CDS_mutant_constituents = []
+        for point_mutant in mutation_list:
 
             if WT_feature_sequence[3 * point_mutant[1] - 3 : -(len(WT_feature_sequence) - 3 * point_mutant[1])] not in codon_table[point_mutant[0]]:
                 raise Plasmid_Exception('User input target codon and sequence codon identities do not match!')
@@ -574,6 +570,7 @@ class Plasmid_Utilities(object):
             for codon in mutant_codon_choices:
                 temp_sequence = WT_feature_sequence[ : 3 * point_mutant[1] - 3 ] + codon + WT_feature_sequence[ - ( len(WT_feature_sequence) - ( 3 * point_mutant[1] ) ) : ]
                 if self.mutant_check(temp_sequence):
+                    CDS_mutant_constituents.append([point_mutant, codon])
                     break
                 else:
                     continue
@@ -582,15 +579,15 @@ class Plasmid_Utilities(object):
 
             WT_feature_sequence = temp_sequence.upper()
 
-        sequence_query = tsession.query(Plasmid_Feature, Feature, Feature_Type, Plasmid)\
-            .filter(Plasmid_Feature.ID == user_mutations.Plasmid_Feature_ID)\
+        sequence_query = self.tsession.query(Plasmid_Feature, Feature, Feature_Type, Plasmid)\
+            .filter(Plasmid_Feature.ID == Plasmid_Feature_ID)\
             .filter(Plasmid.creator == Plasmid_Feature.creator)\
             .filter(Plasmid.creator_entry_number == Plasmid_Feature.creator_entry_number)\
             .filter(Plasmid_Feature.feature_name == Feature.Feature_name)\
             .filter(Feature.Feature_type == Feature_Type.Feature_type)
 
         for plasmid_feature, feature, feature_type, plasmid in sequence_query:
-            database_ID = 'p%s%s' %(plasmid.creator, ('0000' + str(plasmid.creator_entry_number))[-4:])
+            database_ID = plasmid.get_id()
             WT_plasmid_sequence = plasmid.sequence
             WT_feature_name = plasmid_feature.feature_name
             WT_feature_color = feature_type.color
@@ -612,7 +609,7 @@ class Plasmid_Utilities(object):
         # Annotate mutant codons
         Mutant_codon_list = []
 
-        for mutation in user_mutations.mutation_list:
+        for mutation in mutation_list:
 
             Mutant_codon_list.append(
                 SeqFeature(
@@ -628,24 +625,65 @@ class Plasmid_Utilities(object):
                 )
             )
 
-        user_mutations.database_ID = database_ID + '_Mutant'
-        user_mutations.UID = database_ID + '_Mutant'
-        user_mutations.mutant_sequence = Mutant_plasmid_sequence
-
-        mutant_genbank_file = self.generate_ape_file(user_mutations.database_ID,
+        mutant_genbank_file = self.generate_ape_file(database_ID,
                                                      Mutant_plasmid_sequence,
                                                      WT_feature_description,
                                                      mutations=Mutant_codon_list,
                                                      mutant_feature_tuple=mutant_feature_tuple)
 
-        with open('Mutant_GenBank_Test.gb', 'w+b') as file:
+        return Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file
+
+    def add_mutant_to_db(self, Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False):
+
+        description_temp = []
+
+        print CDS_mutant_constituents
+        for mutation in CDS_mutant_constituents:
+            print mutation
+            description_temp.append(mutation[0][0] + str(mutation[0][1]) + mutation[0][2])
+
+        new_CDS_Mutant_entry = {'Plasmid_Feature_ID' : Plasmid_Feature_ID,
+                                'creator' : 'JL', # TEMPORARY - need to find how Shane passes in user info
+                                'Description' : '.'.join(description_temp)
+                                }
+
+        current_mutant_entry = CDS_Mutant.add(self.tsession, new_CDS_Mutant_entry, silent=False)
+
+        for constituent in CDS_mutant_constituents:
+            new_CDS_mutant_constituent = {'ID' : current_mutant_entry.ID,
+                                          'mutation' : constituent[1],
+                                          'position' : constituent[0][1],
+                                          'wt_AA' : constituent[0][0],
+                                          'mut_AA' : constituent[0][2]
+                                          }
+
+            CDS_Mutant_Constituent.add(self.tsession, new_CDS_mutant_constituent)
+
+        if auto_commit:
+            self.tsession.commit()
+
+    def fetch_mutant_from_db(self, user_query):
+        mutant_info = self.tsession.query(CDS_Mutant, CDS_Mutant_Constituent).filter(CDS_Mutant.ID == CDS_Mutant_Constituent.ID).filter(CDS_Mutant.ID == user_query)
+
+        # SELECT * FROM CDS_Mutant INNER JOIN CDS_Mutant_Constituent ON CDS_Mutant.ID == CDS_Mutant_Constituent.ID
+
+        mutation_tuples = []
+        print mutant_info
+        for cds_mutant, cds_mutant_constituent in mutant_info:
+            Plasmid_Feature_ID = cds_mutant.Plasmid_Feature_ID
+            mutation_tuples.append((cds_mutant_constituent.wt_AA, cds_mutant_constituent.position, cds_mutant_constituent.mut_AA))
+
+        print mutation_tuples
+        Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = self.generate_mutant_sequence( Plasmid_Feature_ID, mutation_tuples, write_to_file=True)
+
+        with open('TESTMEEEEEEEEEEEE.gb', 'w+b') as file:
             file.write(mutant_genbank_file)
 
-
-    def generate_ape_from_database_ID(self, tsession, creator, creator_entry_number, write_to_file = False):
-        my_plasmid = tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
+    def generate_ape_from_database_ID(self, creator, creator_entry_number, write_to_file = False):
+        my_plasmid = self.tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
         database_ID = my_plasmid.get_id()
         genbank_file = self.generate_ape_file(database_ID, my_plasmid.sequence.upper(), my_plasmid.description)
+
 
         if write_to_file == True:
             with open('{0}.gb'.format(database_ID), 'w+b') as file:
