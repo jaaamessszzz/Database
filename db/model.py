@@ -548,3 +548,57 @@ class Plasmid_File(DeclarativeBasePlasmid):
 
     def __repr__(self):
         return '{0}, type {1}, created by {2}: {3}'.format(self.file_name, self.file_type, self.creator, self.Description)
+
+class CDS_Mutant(DeclarativeBasePlasmid):
+    __tablename__ = 'CDS_Mutant'
+
+    ID = Column(Integer, nullable=False, primary_key=True)
+    Plasmid_Feature_ID = Column(Integer, ForeignKey('Plasmid_Feature.ID'), nullable=False)
+    Mutant_ID = Column(Integer, nullable=False)
+    creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False)
+    Description = Column(Text(), nullable=True)
+    date = Column(TIMESTAMP, nullable=False)
+
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = CDS_Mutant(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
+
+class CDS_Mutant_Constituent(DeclarativeBasePlasmid):
+    __tablename__ = 'CDS_Mutant_Constituent'
+
+    ID = Column(Integer, ForeignKey('CDS_Mutant.ID'), nullable=False, primary_key=True)
+    mutation = Column(Unicode(16, collation="utf8_bin"), nullable=False)
+    position = Column(Integer, nullable=False)
+    wt_AA = Column(Unicode(1, collation="utf8_bin"), nullable=False)
+    mut_AA = Column(Unicode(1, collation="utf8_bin"), nullable=False)
+    Description = Column(Text(), nullable=True)
+
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = CDS_Mutant_Constituent(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
