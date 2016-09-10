@@ -379,7 +379,9 @@ class Part_Plasmid(DeclarativeBasePlasmid):
     creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable=False, primary_key=True)
     resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False)
 
-    # ID = relationship("Plasmid", primaryjoin='and_(Plasmid.creator==Part_Plasmid.creator, Plasmid.creator_entry_number==Part_Plasmid.creator_entry_number)')
+    plasmid = relationship('Plasmid', primaryjoin='and_(Plasmid.creator == Part_Plasmid.creator, Plasmid.creator_entry_number == Part_Plasmid.creator_entry_number)')
+    parts = relationship('Part_Plasmid_Part', primaryjoin='and_(Part_Plasmid.creator == Part_Plasmid_Part.creator, Part_Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number)')
+
 
     @staticmethod
     def add(tsession, input_dict, silent=True):
@@ -398,6 +400,15 @@ class Part_Plasmid(DeclarativeBasePlasmid):
         except:
             raise
 
+
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d.update(row_to_dict(self.plasmid))
+        d['parts'] = sorted([p.part_number for p in self.parts])
+        return d
+
+
     def __repr__(self):
         return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
 
@@ -407,8 +418,8 @@ class Part_Plasmid_Part(DeclarativeBasePlasmid):
 
     _required_fields = ['creator', 'creator_entry_number', 'part_number']
 
-    creator_entry_number = Column(Integer, nullable=False, primary_key=True)
-    creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
+    creator_entry_number = Column(Integer, ForeignKey('Part_Plasmid.creator_entry_number'), nullable=False, primary_key=True)
+    creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Part_Plasmid.creator'), nullable=False, primary_key=True)
     part_number = Column(String(4), nullable=False, primary_key=True)
 
     @staticmethod
@@ -430,6 +441,7 @@ class Part_Plasmid_Part(DeclarativeBasePlasmid):
 
     def __repr__(self):
         return 'Internal numbering: {0} {1}\nPart number: {2}'.format(self.creator, self.creator_entry_number, self.part_number)
+
 
 class Part_Type(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Type'
