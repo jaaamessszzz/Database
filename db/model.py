@@ -406,6 +406,7 @@ class Part_Plasmid(DeclarativeBasePlasmid):
         d = row_to_dict(self)
         d.update(row_to_dict(self.plasmid))
         d['parts'] = sorted([p.part_number for p in self.parts])
+        d['__id__'] = self.plasmid.get_id() # this is easier to work with for the website hashtables
         return d
 
 
