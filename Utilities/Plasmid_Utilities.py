@@ -1,5 +1,6 @@
 import sys
 import StringIO
+import re
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -422,77 +423,77 @@ class Plasmid_Utilities(object):
             if complete_assembly.find(target) != -1:
                 # Treat type II restriction enzymes as special cases
                 if site[1] == 'Restrxn Type II':
-                    features_list.append(
-                        SeqFeature(
-                            CompoundLocation(
-                                [
-                                    FeatureLocation(complete_assembly.find(target),complete_assembly.find(target) + len(target)),
-                                    FeatureLocation(complete_assembly.find(target) + 7, complete_assembly.find(target) + 11)
-                                ]
-                            ),
-                            type = site[1],
-                            strand = 1,
-                            qualifiers = {"label": site[0],
-                                          "ApEinfo_label": site[0],
-                                          "ApEinfo_fwdcolor": site[3],
-                                          "ApEinfo_revcolor":site[3],
-                                          "ApEinfo_graphicformat":"arrow_data {{0 1 2 0 0 -1} {} 0}"
-                                          }
+                    for instance in re.finditer(target, complete_assembly):
+                        features_list.append(
+                            SeqFeature(
+                                CompoundLocation(
+                                    [
+                                        FeatureLocation(instance.start(), instance.end()),
+                                        FeatureLocation(instance.start() + 7, instance.start() + 11)
+                                    ]
+                                ),
+                                type = site[1],
+                                strand = 1,
+                                qualifiers = {"label": site[0],
+                                              "ApEinfo_label": site[0],
+                                              "ApEinfo_fwdcolor": site[3],
+                                              "ApEinfo_revcolor":site[3],
+                                              "ApEinfo_graphicformat":"arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                              }
+                            )
                         )
-                    )
                 else:
-                    features_list.append(
-                        SeqFeature(
-                            FeatureLocation(complete_assembly.find(target), complete_assembly.find(target) + len(target)),
-                            type=site[1],
-                            strand=1,
-                            qualifiers={"label": site[0],
-                                        "ApEinfo_label": site[0],
-                                        "ApEinfo_fwdcolor": site[3],
-                                        "ApEinfo_revcolor": site[3],
-                                        "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
-                                        }
+                    for instance in re.finditer(target, complete_assembly):
+                        features_list.append(
+                            SeqFeature(
+                                FeatureLocation(instance.start(), instance.end()),
+                                type=site[1],
+                                strand=1,
+                                qualifiers={"label": site[0],
+                                            "ApEinfo_label": site[0],
+                                            "ApEinfo_fwdcolor": site[3],
+                                            "ApEinfo_revcolor": site[3],
+                                            "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                            }
+                            )
                         )
-                    )
 
             if complete_assembly.find(self.reverse_complement(target)) != -1:
                 if site[1] == 'Restrxn Type II':
-                    features_list.append(
-                        SeqFeature(
-                            CompoundLocation(
-                                [
-                                    FeatureLocation(complete_assembly.find(self.reverse_complement(target)),
-                                                    complete_assembly.find(self.reverse_complement(target)) + len(
-                                                        self.reverse_complement(target))),
-                                    FeatureLocation(complete_assembly.find(self.reverse_complement(target)) - 5,
-                                                    complete_assembly.find(self.reverse_complement(target)) - 1)
-                                ]
-                            ),
-                            type=site[1],
-                            strand=-1,
-                            qualifiers={"label": site[0],
-                                        "ApEinfo_label": site[0],
-                                        "ApEinfo_fwdcolor": site[3],
-                                        "ApEinfo_revcolor": site[3],
-                                        "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
-                                        }
+                    for instance in re.finditer(self.reverse_complement(target), complete_assembly):
+                        features_list.append(
+                            SeqFeature(
+                                CompoundLocation(
+                                    [
+                                        FeatureLocation(instance.start(), instance.end()),
+                                        FeatureLocation(instance.start() - 5, instance.start() - 1)
+                                    ]
+                                ),
+                                type=site[1],
+                                strand=-1,
+                                qualifiers={"label": site[0],
+                                            "ApEinfo_label": site[0],
+                                            "ApEinfo_fwdcolor": site[3],
+                                            "ApEinfo_revcolor": site[3],
+                                            "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                            }
+                            )
                         )
-                    )
                 else:
-                    features_list.append(
-                        SeqFeature(
-                            FeatureLocation(complete_assembly.find(self.reverse_complement(target)),
-                                            complete_assembly.find(self.reverse_complement(target)) + len(self.reverse_complement(target))),
-                            type=site[1],
-                            strand=-1,
-                            qualifiers={"label": site[1],
-                                        "ApEinfo_label": site[0],
-                                        "ApEinfo_fwdcolor": site[3],
-                                        "ApEinfo_revcolor": site[3],
-                                        "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
-                                        }
+                    for instance in re.finditer(self.reverse_complement(target), complete_assembly):
+                        features_list.append(
+                            SeqFeature(
+                                FeatureLocation(instance.start(),instance.end()),
+                                type=site[1],
+                                strand=-1,
+                                qualifiers={"label": site[1],
+                                            "ApEinfo_label": site[0],
+                                            "ApEinfo_fwdcolor": site[3],
+                                            "ApEinfo_revcolor": site[3],
+                                            "ApEinfo_graphicformat": "arrow_data {{0 1 2 0 0 -1} {} 0}"
+                                            }
+                            )
                         )
-                    )
 
         if mutations != None:
             for mutation in mutations:
