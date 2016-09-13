@@ -1,11 +1,13 @@
 import sys
 import StringIO
 import re
+import os
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 from Bio.Alphabet import IUPAC
+from sqlalchemy import and_, or_
 
 sys.path.insert(0, '..')
 
@@ -52,6 +54,12 @@ class Plasmid_Utilities(object):
             if not tsession:
                 raise
         self.tsession = tsession or self.dbi.get_session()
+
+        # Get User ID
+        self.username = os.getlogin()
+        user_query = self.tsession.query(Users).filter(Users.lab_username == self.username)
+        for users in user_query:
+            self.user_ID = users.ID
 
 
     def reverse_complement(self, input_sequence):
@@ -129,7 +137,7 @@ class Plasmid_Utilities(object):
                     break
 
         if assembly_type.lower() == 'part':
-            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2)
+            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == self.user_ID).filter(Plasmid.creator_entry_number == 2)
             sequence_upper = input_sequences[0].upper()
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             for asdf in part_entry_vector:
@@ -170,13 +178,18 @@ class Plasmid_Utilities(object):
 
     def fetch_cassette_parts(self, input_sequences, table_info):
         # Get sequences and part numbers for listed part plasmids
+
+        part_IDs = [and_(Plasmid.creator == part_creator, Plasmid.creator_entry_number == part_creator_entry_number) for (part_creator, part_creator_entry_number) in input_sequences]
+
         part_plasmids_query = self.tsession.query(Plasmid, Part_Plasmid, Part_Plasmid_Part, Part_Type) \
-            .filter(Part_Plasmid.creator == Plasmid.creator) \
-            .filter(Part_Plasmid.creator_entry_number == Plasmid.creator_entry_number) \
-            .filter(Part_Plasmid.creator == Part_Plasmid_Part.creator) \
-            .filter(Part_Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number) \
-            .filter(Plasmid.plasmid_name.in_(input_sequences)) \
-            .filter(Part_Plasmid_Part.part_number == Part_Type.part_number)
+            .filter(and_(Part_Plasmid.creator == Plasmid.creator,
+                         Part_Plasmid.creator_entry_number == Plasmid.creator_entry_number,
+                         Part_Plasmid.creator == Part_Plasmid_Part.creator,
+                         Part_Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number,
+                         Part_Plasmid_Part.part_number == Part_Type.part_number,
+                         or_(*part_IDs)
+                         )
+                    )
 
         restriction_enzyme = 'BsaI'
         site_F = 'GGTCTC'
@@ -216,8 +229,8 @@ class Plasmid_Utilities(object):
                     if pt.overhang_3 in leftoverhangs:
                         right_overhang = pt.overhang_3
 
-                print left_overhang
-                print right_overhang
+                # print left_overhang
+                # print right_overhang
 
             site_F_position = sequence_upper.find(left_overhang, sequence_upper.find(site_F))
             site_R_position = sequence_upper.find(right_overhang, sequence_upper.find(site_R) - 10) + 4
@@ -644,7 +657,7 @@ class Plasmid_Utilities(object):
             description_temp.append(mutation[0][0] + str(mutation[0][1]) + mutation[0][2])
 
         new_CDS_Mutant_entry = {'Plasmid_Feature_ID' : Plasmid_Feature_ID,
-                                'creator' : 'JL', # TEMPORARY - need to find how Shane passes in user info
+                                'creator' : self.user_ID,
                                 'Description' : '.'.join(description_temp)
                                 }
 
@@ -664,27 +677,31 @@ class Plasmid_Utilities(object):
             self.tsession.commit()
 
     def fetch_mutant_from_db(self, user_query):
-        mutant_info = self.tsession.query(CDS_Mutant, CDS_Mutant_Constituent).filter(CDS_Mutant.ID == CDS_Mutant_Constituent.ID).filter(CDS_Mutant.ID == user_query)
+        mutant_info = self.tsession.query(CDS_Mutant, CDS_Mutant_Constituent, Plasmid_Feature, Plasmid)\
+            .filter(CDS_Mutant.ID == CDS_Mutant_Constituent.ID)\
+            .filter(Plasmid_Feature.ID == CDS_Mutant.Plasmid_Feature_ID)\
+            .filter(Plasmid_Feature.creator == Plasmid.creator)\
+            .filter(Plasmid_Feature.creator_entry_number == Plasmid.creator_entry_number)\
+            .filter(CDS_Mutant.ID == user_query)
 
         # SELECT * FROM CDS_Mutant INNER JOIN CDS_Mutant_Constituent ON CDS_Mutant.ID == CDS_Mutant_Constituent.ID
 
         mutation_tuples = []
-        print mutant_info
-        for cds_mutant, cds_mutant_constituent in mutant_info:
+        for cds_mutant, cds_mutant_constituent, plasmid_feature, plasmid in mutant_info:
             Plasmid_Feature_ID = cds_mutant.Plasmid_Feature_ID
             mutation_tuples.append((cds_mutant_constituent.wt_AA, cds_mutant_constituent.position, cds_mutant_constituent.mut_AA))
+            database_ID = plasmid.get_id()
+            mutant_ID = cds_mutant.Mutant_ID
 
-        print mutation_tuples
         Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = self.generate_mutant_sequence( Plasmid_Feature_ID, mutation_tuples, write_to_file=True)
 
-        with open('TESTMEEEEEEEEEEEE.gb', 'w+b') as file:
+        with open('{0}_MutID-{1:04d}.gb'.format(database_ID, mutant_ID), 'w+b') as file:
             file.write(mutant_genbank_file)
 
     def generate_ape_from_database_ID(self, creator, creator_entry_number, write_to_file = False):
         my_plasmid = self.tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
         database_ID = my_plasmid.get_id()
         genbank_file = self.generate_ape_file(database_ID, my_plasmid.sequence.upper(), my_plasmid.description)
-
 
         if write_to_file == True:
             with open('{0}.gb'.format(database_ID), 'w+b') as file:
