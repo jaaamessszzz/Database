@@ -137,12 +137,10 @@ class Plasmid_Utilities(object):
                     break
 
         if assembly_type.lower() == 'part':
-            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == self.user_ID).filter(Plasmid.creator_entry_number == 2)
+            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2).one()
             sequence_upper = input_sequences[0].upper()
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
-            for asdf in part_entry_vector:
-                intermediate = asdf.sequence[ : (asdf.sequence.upper().find('GAGACG') - 1) ]
-                # print intermediate
+            intermediate = part_entry_vector.sequence[ : (part_entry_vector.sequence.upper().find('GAGACG') - 1) ]
 
         # if user_input.assembly_type == 'Multicassette':
         #     site_F = 'CGTCTC'
