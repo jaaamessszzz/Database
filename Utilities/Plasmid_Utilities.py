@@ -139,6 +139,7 @@ class Plasmid_Utilities(object):
         if assembly_type.lower() == 'part':
             part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2).one()
             sequence_upper = input_sequences[0].upper()
+            # todo: this part of the code needs to be changed - if either sequence does not exist then the code runs anyway e.g. sequence_upper.find('CGTCTC') + 7 becomes -1+7=6 and the second expression becomes -2
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             intermediate = part_entry_vector.sequence[ : (part_entry_vector.sequence.upper().find('GAGACG') - 1) ]
 
