@@ -106,7 +106,7 @@ class Plasmid_Utilities(object):
                 print 'Primer', ID, "(R) binds the target plasmid with 5' at position", (len(target_sequence) - target_reverse_complement.find(sequence.upper()[20:]))
                 print '\n'
 
-    def golden_gate_assembly(self, input_sequences, assembly_type):
+    def golden_gate_assembly(self, input_sequences, assembly_type, part_type=None):
         '''
         This function will take user input of a list of plasmids and attempt to perform a golden gate assembly.
 
@@ -138,7 +138,7 @@ class Plasmid_Utilities(object):
 
         if assembly_type.lower() == 'part':
             part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2).one()
-            sequence_upper = input_sequences[0].upper()
+            sequence_upper = self.add_part_arms(input_sequences[0], part_type)
             # todo: this part of the code needs to be changed - if either sequence does not exist then the code runs anyway e.g. sequence_upper.find('CGTCTC') + 7 becomes -1+7=6 and the second expression becomes -2
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             intermediate = part_entry_vector.sequence[ : (part_entry_vector.sequence.upper().find('GAGACG') - 1) ]
@@ -228,9 +228,6 @@ class Plasmid_Utilities(object):
                     if pt.overhang_3 in leftoverhangs:
                         right_overhang = pt.overhang_3
 
-                # print left_overhang
-                # print right_overhang
-
             site_F_position = sequence_upper.find(left_overhang, sequence_upper.find(site_F))
             site_R_position = sequence_upper.find(right_overhang, sequence_upper.find(site_R) - 10) + 4
 
@@ -252,12 +249,35 @@ class Plasmid_Utilities(object):
                                                                                plasmid.creator_entry_number]
                 already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
 
-            # if plasmid.plasmid_name == 'pAAG87':
-            #     print sequence_upper
-            #     import pprint
-            #     pprint.pprint(table_info['Part list'])
-
         return table_info
+
+    def add_part_arms(self, sequence, part_type):
+        # Some of the overhangs aren't added yet since I don't have access to APE at the moment...
+        arm_dict = {'1'  : ['', ''],
+                    '2'  : ['gcatCGTCTCaAGCAGGTCTCAAACG', 'TATGtGAGACCtGAGACGgcat'],
+                    # '2a' : ['', ''],
+                    #  '2b' : ['', ''],
+                    '3'  : ['gcatCGTCTCaAGCAGGTCTCaTATG', 'ATCCtGAGACCtGAGACGgcat'],
+                    '3a' : ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGCTTCTtGAGACCtGAGACGgcat'],
+                    '3b' : ['gcatCGTCTCaAGCAGGTCTCATTCT', 'ATCCtGAGACCtGAGACGgcat'],
+                    '4'  : ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
+                    # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
+                    #  '4b' : ['', 'GCTGtGAGACCtGAGACGgcat'],
+                    '5'  : ['', ''],
+                    '6'  : ['gcatCGTCTCaAGCAGGTCTCA', 'TGAGACCtGAGACGgcat'],
+                    '7'  : ['', '']
+                    }
+
+        try:
+            part_sequence = arm_dict[part_type][0] + sequence + arm_dict[part_type][1]
+            if part_sequence.upper().find('CGTCTC') == -1 or part_sequence.upper().find('GAGACG') == -1:
+                raise Plasmid_Exception('BsmBI sites not found! Something fishy is going on...')
+
+        except:
+            raise Plasmid_Exception('%s part types are not supported yet!' %part_type)
+
+        return part_sequence.upper()
+
 
     def plasmid_checks(self, input_dict, assembly_type, part_type = None):
         '''
