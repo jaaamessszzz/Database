@@ -45,7 +45,7 @@ class Plasmid_Utilities(object):
     * Annotating working and archive locations for all plasmids
 
     '''
-    def __init__(self, tsession = None):
+    def __init__(self, tsession = None, username = None):
         # Create up the database session
         self.dbi = None
         try:
@@ -56,10 +56,10 @@ class Plasmid_Utilities(object):
         self.tsession = tsession or self.dbi.get_session()
 
         # Get User ID
-        self.username = os.getlogin()
-        user_query = self.tsession.query(Users).filter(Users.lab_username == self.username)
-        for users in user_query:
-            self.user_ID = users.ID
+        self.username = username
+        if not self.username:
+            self.username = os.getlogin() # The webserver cannot call this function so it must instead pass username in as an argument
+        self.user_ID = self.tsession.query(Users).filter(Users.lab_username == self.username).one().ID
 
 
     def reverse_complement(self, input_sequence):
