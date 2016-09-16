@@ -190,6 +190,7 @@ class Plasmid_Utilities(object):
         site_R = 'GAGACC'
 
         already_fetched_cassettes = []
+        part_sequences = []
 
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
@@ -244,12 +245,13 @@ class Plasmid_Utilities(object):
                         table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
                                                                                    plasmid.creator_entry_number]
                     already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
+            part_sequences.append(sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4])
 
         if table_info:
             return table_info
         else:
-            return sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4]
-
+            return part_sequences
+        
     def add_part_arms(self, sequence, part_type):
         # Some of the overhangs aren't added yet since I don't have access to APE at the moment...
         arm_dict = {'1'  : ['', ''],
