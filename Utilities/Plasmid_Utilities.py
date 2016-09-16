@@ -410,6 +410,8 @@ class Plasmid_Utilities(object):
         if auto_commit:
             self.tsession.commit()
 
+        return current_plasmid_entry
+
 
     def add_features(self, current_plasmid_entry):
         features_query = self.tsession.query(Feature, Feature_Type).filter(
