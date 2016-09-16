@@ -93,7 +93,8 @@ class Plasmid_View_Tools(object):
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
                 part_sequence = self.plasmid_util.fetch_cassette_parts([(plasmid.creator, plasmid.creator_entry_number)])[4:-4]
 
-                for instance in re.finditer(part_sequence.upper().strip(), current_plasmid_sequence.sequence):
-                    part_indicies_list.append([plasmid.description, (instance.start(), instance.end())])
+                for part in part_sequence:
+                    for instance in re.finditer(part.upper().strip(), current_plasmid_sequence.sequence):
+                        part_indicies_list.append([plasmid.description, (instance.start(), instance.end())])
 
         return feature_indicies_list, part_indicies_list
