@@ -139,7 +139,6 @@ class Plasmid_Utilities(object):
         if assembly_type.lower() == 'part':
             part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2).one()
             sequence_upper = self.add_part_arms(input_sequences[0], part_type)
-            # todo: this part of the code needs to be changed - if either sequence does not exist then the code runs anyway e.g. sequence_upper.find('CGTCTC') + 7 becomes -1+7=6 and the second expression becomes -2
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             intermediate = part_entry_vector.sequence[ : (part_entry_vector.sequence.upper().find('GAGACG') - 1) ]
 
@@ -166,16 +165,12 @@ class Plasmid_Utilities(object):
         if intermediate[-4:] != intermediate[:4]:
             raise Plasmid_Exception('Incomplete assembly! This assembly does not produce a circular plasmid! :(')
 
-        table_info['Complete Assembly'] = intermediate[4:].upper()
-
-        # DEBUGGING
-        # print table_info['Complete Assembly']
-
+        table_info['Complete Assembly'] = intermediate[:-4].upper()
         table_info['Complete Description'] = ' | '.join(table_info['Description'])
 
         return table_info
 
-    def fetch_cassette_parts(self, input_sequences, table_info):
+    def fetch_cassette_parts(self, input_sequences, table_info=None):
         # Get sequences and part numbers for listed part plasmids
 
         part_IDs = [and_(Plasmid.creator == part_creator, Plasmid.creator_entry_number == part_creator_entry_number) for (part_creator, part_creator_entry_number) in input_sequences]
@@ -194,9 +189,10 @@ class Plasmid_Utilities(object):
         site_F = 'GGTCTC'
         site_R = 'GAGACC'
 
-        for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
+        already_fetched_cassettes = []
+        part_sequences = []
 
-            already_fetched_cassettes = []
+        for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
             print "%s\t%s\t%s\t%s" % (
             plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
@@ -216,13 +212,13 @@ class Plasmid_Utilities(object):
                 left_overhangs = set()
                 right_overhangs = set()
 
-                for p, pp, ppp, pt in part_plasmids_query.filter( Plasmid.creator == plasmid.creator).filter(Plasmid.creator_entry_number == plasmid.creator_entry_number):
+                for p, pp, ppp, pt in part_plasmids_query.filter(and_(Plasmid.creator == plasmid.creator, Plasmid.creator_entry_number == plasmid.creator_entry_number)):
                     left_overhangs.add(pt.overhang_5)
                     right_overhangs.add(pt.overhang_3)
 
                 leftoverhangs = left_overhangs.symmetric_difference(right_overhangs) # Leftover overhangs? Get it?
 
-                for p, pp, ppp, pt in part_plasmids_query.filter(Plasmid.creator == plasmid.creator).filter(Plasmid.creator_entry_number == plasmid.creator_entry_number):
+                for p, pp, ppp, pt in part_plasmids_query.filter(and_(Plasmid.creator == plasmid.creator, Plasmid.creator_entry_number == plasmid.creator_entry_number)):
                     if pt.overhang_5 in leftoverhangs:
                         left_overhang = pt.overhang_5
                     if pt.overhang_3 in leftoverhangs:
@@ -235,22 +231,27 @@ class Plasmid_Utilities(object):
             if site_F_position > site_R_position:
                 sequence_upper = sequence_upper[site_R_position + 8:] + sequence_upper[:site_R_position + 8]
 
-            if (plasmid.creator, plasmid.creator_entry_number) not in already_fetched_cassettes:
-                table_info['Part list'].append(sequence_upper[
-                                               sequence_upper.find(left_overhang, sequence_upper.find(site_F)):
-                                               sequence_upper.find(right_overhang,
-                                                                   sequence_upper.find(site_R) - 10) + 4
-                                               ])
-                table_info['Description'].append(plasmid.description)
-                table_info['Part list ID'].append(
-                    (part_plasmid_part.part_number, plasmid.creator, plasmid.creator_entry_number))
-                if part_plasmid_part.part_number == '1' or part_plasmid_part.part_number == '5':
-                    table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
-                                                                               plasmid.creator_entry_number]
-                already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
+            if table_info:
+                if (plasmid.creator, plasmid.creator_entry_number) not in already_fetched_cassettes:
+                    table_info['Part list'].append(sequence_upper[
+                                                   sequence_upper.find(left_overhang, sequence_upper.find(site_F)):
+                                                   sequence_upper.find(right_overhang,
+                                                                       sequence_upper.find(site_R) - 10) + 4
+                                                   ])
+                    table_info['Description'].append(plasmid.description)
+                    table_info['Part list ID'].append(
+                        (part_plasmid_part.part_number, plasmid.creator, plasmid.creator_entry_number))
+                    if part_plasmid_part.part_number == '1' or part_plasmid_part.part_number == '5':
+                        table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
+                                                                                   plasmid.creator_entry_number]
+                    already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
+            part_sequences.append(sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4])
 
-        return table_info
-
+        if table_info:
+            return table_info
+        else:
+            return part_sequences
+        
     def add_part_arms(self, sequence, part_type):
         # Some of the overhangs aren't added yet since I don't have access to APE at the moment...
         arm_dict = {'1'  : ['', ''],
