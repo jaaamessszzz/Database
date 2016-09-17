@@ -251,7 +251,7 @@ class Plasmid_Utilities(object):
             return table_info
         else:
             return part_sequences
-        
+
     def add_part_arms(self, sequence, part_type):
         # Some of the overhangs aren't added yet since I don't have access to APE at the moment...
         arm_dict = {'1'  : ['', ''],
