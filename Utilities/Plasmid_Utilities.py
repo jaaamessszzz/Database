@@ -430,7 +430,7 @@ class Plasmid_Utilities(object):
 
 
     def upload_file(self, current_plasmid_entry):
-        buffy = self.generate_ape_file(current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id(), current_plasmid_entry.sequence, current_plasmid_entry.description)
+        buffy = self.generate_ape_file(current_plasmid_entry.get_id(), current_plasmid_entry.sequence, current_plasmid_entry.description, current_plasmid_entry.plasmid_name)
 
         filename = current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id()
         new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
@@ -444,7 +444,7 @@ class Plasmid_Utilities(object):
         Plasmid_File.add(self.tsession, new_plasmid_file_entry, silent=False)
 
 
-    def generate_ape_file(self, plasmid_name, complete_assembly, complete_description, mutations = None, mutant_feature_tuple = None):
+    def generate_ape_file(self, Database_ID, complete_assembly, complete_description, UID = None,  mutations = None, mutant_feature_tuple = None):
         features_list = []
         features_query = self.tsession.query(Feature, Feature_Type).filter(Feature.Feature_type == Feature_Type.Feature_type)
         possible_features = [(record.Feature_name, record.Feature_type, record.Feature_sequence, color.color, record.description) for record, color in features_query]
@@ -534,6 +534,11 @@ class Plasmid_Utilities(object):
         if mutations != None:
             for mutation in mutations:
                 features_list.append(mutation)
+
+        # Check that UID is not greater than 15 characters long or null, otherwise defaults to Database ID
+        if plasmid
+
+
 
         sequence = SeqRecord( Seq(complete_assembly,
                                   IUPAC.unambiguous_dna),
@@ -724,7 +729,7 @@ class Plasmid_Utilities(object):
     def generate_ape_from_database_ID(self, creator, creator_entry_number, write_to_file = False):
         my_plasmid = self.tsession.query(Plasmid).filter(Plasmid.creator == creator).filter(Plasmid.creator_entry_number == creator_entry_number).one()
         database_ID = my_plasmid.get_id()
-        genbank_file = self.generate_ape_file(database_ID, my_plasmid.sequence.upper(), my_plasmid.description)
+        genbank_file = self.generate_ape_file(database_ID, my_plasmid.sequence.upper(), my_plasmid.description, UID = my_plasmid.plasmid_name)
 
         if write_to_file == True:
             with open('{0}.gb'.format(database_ID), 'w+b') as file:
