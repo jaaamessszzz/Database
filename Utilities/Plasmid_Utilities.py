@@ -430,7 +430,7 @@ class Plasmid_Utilities(object):
 
 
     def upload_file(self, current_plasmid_entry):
-        buffy = self.generate_ape_file(current_plasmid_entry.get_id(), current_plasmid_entry.sequence, current_plasmid_entry.description, current_plasmid_entry.plasmid_name)
+        buffy = self.generate_ape_file(current_plasmid_entry.get_id(), current_plasmid_entry.sequence, current_plasmid_entry.description, UID = current_plasmid_entry.plasmid_name)
 
         filename = current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id()
         new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
@@ -546,8 +546,8 @@ class Plasmid_Utilities(object):
 
         sequence = SeqRecord( Seq(complete_assembly,
                                   IUPAC.unambiguous_dna),
-                              id=Database_ID,
-                              name=plasmid_name,
+                              id=Database_ID, # ACCESSION AND VERSION
+                              name=plasmid_name, # LOCUS
                               description=complete_description,
                               features = features_list
                               )
@@ -634,6 +634,7 @@ class Plasmid_Utilities(object):
 
         for plasmid_feature, feature, feature_type, plasmid in sequence_query:
             database_ID = plasmid.get_id()
+            user_ID = plasmid.plasmid_name
             WT_plasmid_sequence = plasmid.sequence
             WT_feature_name = plasmid_feature.feature_name
             WT_feature_color = feature_type.color
@@ -674,6 +675,7 @@ class Plasmid_Utilities(object):
         mutant_genbank_file = self.generate_ape_file(database_ID,
                                                      Mutant_plasmid_sequence,
                                                      WT_feature_description,
+                                                     UID = user_ID,
                                                      mutations=Mutant_codon_list,
                                                      mutant_feature_tuple=mutant_feature_tuple)
 
