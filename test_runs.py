@@ -143,7 +143,7 @@ def main():
     tsession = dbi.get_session()
 
 
-    asdf.generate_ape_from_database_ID(tsession, 'AG', '3', write_to_file=True)
+    asdf.generate_ape_from_database_ID(tsession, 'JL', '1', write_to_file=True)
     # generate_cassette_plasmids(asdf, dbi, tsession)
     # generate_part_plasmids(asdf, dbi, tsession)
 
