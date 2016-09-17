@@ -154,7 +154,7 @@ def main():
     # generate_part_plasmids(asdf, tsession)
     # qwer.get_plasmid_indicies(('JL', '17'))
 
-    asdf.generate_ape_from_database_ID(tsession, 'JL', '1', write_to_file=True)
+    asdf.generate_ape_from_database_ID('JL', '1', write_to_file=True)
     # generate_cassette_plasmids(asdf, dbi, tsession)
     # generate_part_plasmids(asdf, dbi, tsession)
     tsession.close()
