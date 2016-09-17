@@ -536,9 +536,13 @@ class Plasmid_Utilities(object):
                 features_list.append(mutation)
 
         # Check that UID is not greater than 15 characters long or null, otherwise defaults to Database ID
-        if plasmid
-
-
+        if UID:
+            if len(UID) > 15 or len(UID) == 0:
+                plasmid_name = Database_ID
+            else:
+                plasmid_name = UID
+        else:
+            plasmid_name = Database_ID
 
         sequence = SeqRecord( Seq(complete_assembly,
                                   IUPAC.unambiguous_dna),
