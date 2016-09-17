@@ -1,4 +1,5 @@
 from Utilities.Plasmid_Utilities import Plasmid_Utilities
+from Utilities.Plasmid_View_Tools import Plasmid_View_Tools
 from db.interface import DatabaseInterface
 from db.model import Feature, Plasmid_File, Plasmid
 
@@ -13,7 +14,7 @@ def add_things(asdf, input_dict, assembly_type, part_type):
     asdf.add_part_plasmid_to_db(input_dict, part_type, auto_commit=False)
     
 # Generates Gen9 WT Scaffold part plasmid input for database interactions
-def generate_part_plasmids(asdf, dbi, tsession):
+def generate_part_plasmids(asdf, tsession):
     Gen9_Features = tsession.query(Feature).filter(Feature.description.like("%Gen9 WT%"))
 
     feature_dict = {}
@@ -36,7 +37,7 @@ def generate_part_plasmids(asdf, dbi, tsession):
                        )
 
     part_list = collections.OrderedDict(part_types_temp)
-    enum = 17
+    enum = 17 # Start UIDs at index 17
 
     assembly_type = 'part'
 
@@ -102,14 +103,15 @@ def generate_part_plasmids(asdf, dbi, tsession):
         with open(database_file.file_name, 'w+b') as file:
             file.write(database_file.File)
 
-def generate_cassette_plasmids(asdf, dbi, tsession):
-    input_sequences = ['pAAG28',
-                       'pAAG67',
-                       'pJL0003',
-                       'pAAG52',
-                       'pAAG22',
-                       'pAAG31',
-                       'pAAG87'
+def generate_cassette_plasmids(asdf):
+
+    input_sequences = [('AG', 1),
+                       ('AG', 3),
+                       ('AG', 15),
+                       ('AG', 19),
+                       ('AG', 8),
+                       ('AG', 10),
+                       ('AG', 17)
                        ]
 
     assembly_type = 'cassette'
@@ -117,7 +119,7 @@ def generate_cassette_plasmids(asdf, dbi, tsession):
     table_info = asdf.golden_gate_assembly(input_sequences, assembly_type)
 
     input_dict = {'creator': 'JL',
-                  'plasmid_name': 'pJL0017',
+                  'plasmid_name': 'pJLTEST',
                   'plasmid_type': assembly_type,
                   'location': 'Mah box',
                   'description': table_info[
@@ -127,7 +129,11 @@ def generate_cassette_plasmids(asdf, dbi, tsession):
                   }
 
     asdf.plasmid_checks(input_dict, assembly_type)
-    asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=True)
+
+    import pprint
+    pprint.pprint(input_dict['sequence'])
+
+    # asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
 
 def main():
 
@@ -136,22 +142,30 @@ def main():
             self.Plasmid_Feature_ID = Plasmid_Feature_ID
             self.mutation_list = mutation_list
 
-    asdf = Plasmid_Utilities()
-
     # Create up the database session
     dbi = DatabaseInterface()
     tsession = dbi.get_session()
 
+    asdf = Plasmid_Utilities(tsession)
+    qwer = Plasmid_View_Tools(tsession)
+
+    # asdf.generate_ape_from_database_ID(tsession, 'AG', '3', write_to_file=True)
+    # generate_cassette_plasmids(asdf)
+    # generate_part_plasmids(asdf, tsession)
+    # qwer.get_plasmid_indicies(('JL', '17'))
 
     asdf.generate_ape_from_database_ID(tsession, 'JL', '1', write_to_file=True)
     # generate_cassette_plasmids(asdf, dbi, tsession)
     # generate_part_plasmids(asdf, dbi, tsession)
+    tsession.close()
 
-    # generate_cassette_plasmids(asdf, dbi, tsession)
-    # generate_part_plasmids(asdf, dbi, tsession)
+    ### Generate a Mutant Plasmid Feature and Associated .ape file, push to database
+    # Plasmid_Feature_ID = 984 # WT 1F10 Chain 1/B
+    # mutation_list = [('L', 20, 'R'),('K', 40, 'A'),('C', 60, 'D')]
+    # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
+    # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False )
 
-    # user_mutations = make_mutations(306, [('D', 20, 'V'),('A', 46, 'K'),('A', 141, 'F')]) # 1G2 Chain 1
-    # asdf.generate_mutant_sequence(tsession, user_mutations)
 
 if __name__ == '__main__':
     main()
+
