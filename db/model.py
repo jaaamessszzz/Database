@@ -193,6 +193,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
         # Retrieve the list of plasmid type-specific details
         d['details'] = None
+        part_numbers = None
         if self.plasmid_type == 'part':
             resistance, part_number = None, None
             try:
@@ -200,13 +201,13 @@ class Plasmid(DeclarativeBasePlasmid):
             except:
                 d['errors'].append('This part plasmid is missing a Part_Plasmid record so the resistance is unknown.')
             try:
-                part_number = tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number)).one().part_number
+                part_numbers = sorted([r.part_number for r in tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number))])
             except:
                 d['errors'].append('This part plasmid is missing a Part_Plasmid_Part record so the part number is unknown.')
 
             d['details'] = dict(
                 resistance = resistance,
-                part_number = part_number,
+                part_numbers = part_numbers,
             )
         d['details'] = d['details'] or {}
 

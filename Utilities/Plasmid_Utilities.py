@@ -432,10 +432,11 @@ class Plasmid_Utilities(object):
     def upload_file(self, current_plasmid_entry):
         buffy = self.generate_ape_file(current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id(), current_plasmid_entry.sequence, current_plasmid_entry.description)
 
+        filename = current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id()
         new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
-                                  'file_name' : '{0}.gb'.format(current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id()),
-                                  'file_type' : 'GenBank file',
+                                  'file_name' : unicode(filename, 'utf-8'),
+                                  'file_type' : u'GenBank file',
                                   'Description' : current_plasmid_entry.description,
                                   'File' : buffy
                                   }
