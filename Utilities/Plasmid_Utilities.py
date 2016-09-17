@@ -546,7 +546,7 @@ class Plasmid_Utilities(object):
 
         sequence = SeqRecord( Seq(complete_assembly,
                                   IUPAC.unambiguous_dna),
-                              id=plasmid_name,
+                              id=Database_ID,
                               name=plasmid_name,
                               description=complete_description,
                               features = features_list
