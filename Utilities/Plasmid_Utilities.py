@@ -137,6 +137,23 @@ class Plasmid_Utilities(object):
                     break
 
         if assembly_type.lower() == 'part':
+            # Checks that part 3s have len % 3 = 0 and do not contain a starting MET or stop codon anywhere
+            if '3' in part_type:
+                if len(input_sequences[0]) % 3 != 0:
+                    raise Plasmid_Exception('Your input sequence contains incomplete codons!!')
+
+            if any(input_type == part_type for input_type in ['3', '3a']):
+                if input_sequences[0][:3].upper() == 'ATG':
+                    # Do we need to raise? Or can we just remove the start codon for the user and inform them?
+                    raise Plasmid_Exception(
+                        'Please remove the start codon from your input sequence! The start codon is already in the part plasmid sequence.')
+
+                # Check that stop codons are not in the input coding sequence
+                if any(codon in [input_sequences[0][i:i + 3].upper() for i in range(0, len(input_sequences[0]), 3)] for codon in ['TAA', 'TAG', 'TGA']):
+                    raise Plasmid_Exception('There are stop codons in your coding sequence! Plase remove them!')
+
+            # Stop codons: TAA TAG TGA
+
             part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == 'JL').filter(Plasmid.creator_entry_number == 2).one()
             sequence_upper = self.add_part_arms(input_sequences[0], part_type)
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
@@ -560,10 +577,7 @@ class Plasmid_Utilities(object):
 
     def mutant_check(self, temp_sequence):
         sequence_pass = True
-        if 'GGTCTC' in temp_sequence \
-                or 'GAGACC' in temp_sequence \
-                or 'CGTCTC' in temp_sequence \
-                or 'GAGACG' in temp_sequence:
+        if any(rxn_site in temp_sequence for rxn_site in ['GGTCTC', 'GAGACC', 'CGTCTC', 'GAGACG']):
             sequence_pass = False
         return sequence_pass
 
