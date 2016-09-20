@@ -4,17 +4,18 @@ import re
 import os
 import numpy as np
 from sqlalchemy import and_, or_
-from Utilities.Plasmid_Utilities import Plasmid_Utilities, Plasmid_Exception
 
 sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
     from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
+    from Utilities.Plasmid_Utilities import Plasmid_Utilities, Plasmid_Exception
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
     from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
+    from kprimers.Utilities.Plasmid_Utilities import Plasmid_Utilities, Plasmid_Exception
 
 class Plasmid_View_Tools(object):
     '''
@@ -80,9 +81,9 @@ class Plasmid_View_Tools(object):
                     feature_indicies_list.append([plasmid_feature.feature_name, (instance.start(), instance.end()), feature_type.color])
 
         # todo: add all relevant information to part index list (only name and indicies so far)
+        part_indicies_list = []
         if current_plasmid_sequence.plasmid_type.lower() == 'cassette':
             # List of [part_name, (starting_index, ending_index)]
-            part_indicies_list = []
 
             cassette_parts = self.tsession.query(Cassette_Assembly, Plasmid)\
                 .filter(and_(current_plasmid_sequence.creator == Cassette_Assembly.Cassette_creator,
