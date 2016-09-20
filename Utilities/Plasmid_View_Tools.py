@@ -132,9 +132,11 @@ class Plasmid_View_Tools(object):
         TM_F = 0
         TM_R = 0
 
+        target_upper = target_sequence.upper()
+
         # Generate Forward Primer
         while TM_F < Target_TM:
-            TM_F = mt.Tm_NN(Seq(target_sequence[:primer_length_F]),
+            TM_F = mt.Tm_NN(Seq(target_upper[:primer_length_F]),
                             nn_table = mt.DNA_NN2,
                             dnac1 = primer / 2,  # nM Primers / 2
                             dnac2 = primer / 2,  # nM Primers / 2
@@ -147,20 +149,20 @@ class Plasmid_View_Tools(object):
                             saltcorr = 5
                             )
 
-            print target_sequence[:primer_length_F]
+            print target_upper[:primer_length_F]
             print TM_F
 
             if TM_F < Target_TM:
                 primer_length_F += 1
                 TM_F_previous = TM_F
-                target_primer_F = target_sequence[:primer_length_F]
+                target_primer_F = target_upper[:primer_length_F]
             else:
                 print '\n'
                 print TM_F_previous, target_primer_F
 
         # Generate Reverse Primer
         while TM_R < Target_TM:
-            TM_R = mt.Tm_NN(Seq(self.plasmid_util.reverse_complement(target_sequence[-primer_length_R:])),
+            TM_R = mt.Tm_NN(Seq(self.plasmid_util.reverse_complement(target_upper[-primer_length_R:])),
                             nn_table=mt.DNA_NN2,
                             dnac1=primer / 2,  # nM Primers / 2
                             dnac2=primer / 2,  # nM Primers / 2
@@ -173,21 +175,21 @@ class Plasmid_View_Tools(object):
                             saltcorr=5
                             )
 
-            print target_sequence[-primer_length_R:]
+            print target_upper[-primer_length_R:]
             print TM_R
 
             if TM_R < Target_TM:
                 primer_length_R += 1
                 TM_R_previous = TM_R
-                target_primer_R = self.plasmid_util.reverse_complement(target_sequence[-primer_length_R:])
+                target_primer_R = self.plasmid_util.reverse_complement(target_upper[-primer_length_R:])
             else:
                 print '\n'
                 print TM_R_previous, target_primer_R
 
         # NOT TESTED YET!!!!11!1!!111!!!!!11!11!11!1
         if left_arm and right_arm:
-            target_primer_F = left_arm + target_primer_F
-            target_primer_R = self.plasmid_util.reverse_complement(right_arm) + target_primer_R
+            target_primer_F = left_arm.upper() + target_primer_F
+            target_primer_R = self.plasmid_util.reverse_complement(right_arm).upper() + target_primer_R
         elif left_arm == None and right_arm == None:
             pass
         else:
