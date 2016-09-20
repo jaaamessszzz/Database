@@ -153,7 +153,34 @@ class Plasmid_View_Tools(object):
             if TM_F < Target_TM:
                 primer_length_F += 1
                 TM_F_previous = TM_F
-                target_primer = target_sequence[:primer_length_F]
+                target_primer_F = target_sequence[:primer_length_F]
             else:
                 print '\n'
-                print TM_F_previous, target_primer
+                print TM_F_previous, target_primer_F
+
+        # Generate Reverse Primer
+        while TM_R < Target_TM:
+            TM_R = mt.Tm_NN(Seq(self.plasmid_util.reverse_complement(target_sequence[-primer_length_R:])),
+                            nn_table=mt.DNA_NN2,
+                            dnac1=primer / 2,  # nM Primers / 2
+                            dnac2=primer / 2,  # nM Primers / 2
+                            selfcomp=False,
+                            Na=Na,  # mM
+                            K=K or 0,  # mM
+                            Tris=Tris or 0,  # mM
+                            Mg=Mg or 0,  # mM
+                            dNTPs=dNTPs or 0,
+                            saltcorr=5
+                            )
+
+            print target_sequence[-primer_length_R:]
+            print TM_R
+
+            if TM_R < Target_TM:
+                primer_length_R += 1
+                TM_R_previous = TM_R
+                target_primer_R = self.plasmid_util.reverse_complement(target_sequence[-primer_length_R:])
+            else:
+                print '\n'
+                print TM_R_previous, target_primer_R
+
