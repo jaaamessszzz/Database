@@ -184,3 +184,14 @@ class Plasmid_View_Tools(object):
                 print '\n'
                 print TM_R_previous, target_primer_R
 
+        # NOT TESTED YET!!!!11!1!!111!!!!!11!11!11!1
+        if left_arm and right_arm:
+            target_primer_F = left_arm + target_primer_F
+            target_primer_R = self.plasmid_util.reverse_complement(right_arm) + target_primer_R
+        elif left_arm == None and right_arm == None:
+            pass
+        else:
+            raise Plasmid_Exception('You need to add both the left and right extensions for this to work!')
+
+
+
