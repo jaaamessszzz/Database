@@ -30,13 +30,14 @@ class Plasmid_View_Tools(object):
             if not tsession:
                 raise
         self.tsession = tsession or self.dbi.get_session()
-        self.plasmid_util = Plasmid_Utilities(tsession or self.dbi.get_session())
 
         # Get User ID
         self.username = username
         if not self.username:
             self.username = os.getlogin() # The webserver cannot call this function so it must instead pass username in as an argument
         self.user_ID = self.tsession.query(Users).filter(Users.lab_username == self.username).one().ID
+        self.plasmid_util = Plasmid_Utilities(tsession or self.dbi.get_session(), username = self.username)
+
 
     def get_plasmid_indicies(self, current_plasmid):
         """
