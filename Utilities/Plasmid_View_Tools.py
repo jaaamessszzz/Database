@@ -2,6 +2,7 @@ import sys
 import StringIO
 import re
 import os
+import numpy as np
 from sqlalchemy import and_, or_
 from Utilities.Plasmid_Utilities import Plasmid_Utilities, Plasmid_Exception
 
@@ -73,10 +74,10 @@ class Plasmid_View_Tools(object):
 
             for instance in re.finditer(self.plasmid_util.reverse_complement(feature.Feature_sequence.upper().strip()), current_plasmid_sequence.sequence):
                 if feature.Feature_type == 'Restrxn Type II':
-                    feature_indicies_list.append([plasmid_feature.feature_name + ' R', (instance.start(), instance.end())])
-                    feature_indicies_list.append([plasmid_feature.feature_name + ' Overhang', (instance.start() - 5, instance.start() - 1)])
+                    feature_indicies_list.append([plasmid_feature.feature_name + ' R', (instance.start(), instance.end()), feature_type.color])
+                    feature_indicies_list.append([plasmid_feature.feature_name + ' Overhang', (instance.start() - 5, instance.start() - 1), feature_type.color])
                 else:
-                    feature_indicies_list.append([plasmid_feature.feature_name, (instance.start(), instance.end())])
+                    feature_indicies_list.append([plasmid_feature.feature_name, (instance.start(), instance.end()), feature_type.color])
 
         # todo: add all relevant information to part index list (only name and indicies so far)
         if current_plasmid_sequence.plasmid_type.lower() == 'cassette':
@@ -98,3 +99,59 @@ class Plasmid_View_Tools(object):
                         part_indicies_list.append([plasmid.description, (instance.start(), instance.end())])
 
         return feature_indicies_list, part_indicies_list
+
+    def generate_primers(self, target_sequence, Target_TM, primer = 50, Na = 50, K = None, Mg = None, dNTPs = None, Tris = None, left_arm = None, right_arm = None):
+        '''
+        Function for generating primers with SequenceViewer + User inputs and depositing designed primers into the
+        Primer table.
+
+        Tried doing this by hand but discovered that BioPython already has a function for this...
+
+        If so inclined, here are the references I used:
+        d_H and d_S values from Improved thermodynamic parameters and helix initiation factor to predict stability of
+        DNA duplexes. Naoki Sugimoto, Shu-ich Nakano, Mari Yoneyama and Kei-ich Honda. Nucleic Acids Research, 1996,
+        Vol. 24, No. 22 4501-4505
+        Equations and stuff from A unified view of polymer, dumbbell, and oligonucleotide DNA nearest-neighbor
+        thermodynamics. JOHN SANTALUCIA, JR. Proceedings of the National Academy of Sciences. Vol. 95, pp 1460-1465,
+        February 1998
+
+        :param target_sequence: Input target sequence from SequenceViewer
+        :param TM: Target melting temperature in Celcius
+        :param salt: salt concentration in Molar
+        :return: Forward and Reverse Primers with associated TMs
+        '''
+
+        from Bio.SeqUtils import MeltingTemp as mt
+        from Bio.Seq import Seq
+
+        primer_length_F = 1
+        primer_length_R = 1
+
+        TM_F = 0
+        TM_R = 0
+
+        # Generate Forward Primer
+        while TM_F < Target_TM:
+            TM_F = mt.Tm_NN(Seq(target_sequence[:primer_length_F]),
+                            nn_table = mt.DNA_NN2,
+                            dnac1 = primer / 2,  # nM Primers / 2
+                            dnac2 = primer / 2,  # nM Primers / 2
+                            selfcomp = False,
+                            Na = Na,     # mM
+                            K = K or 0,        # mM
+                            Tris = Tris or 0,     # mM
+                            Mg = Mg or 0,       # mM
+                            dNTPs = dNTPs or 0,
+                            saltcorr = 5
+                            )
+
+            print target_sequence[:primer_length_F]
+            print TM_F
+
+            if TM_F < Target_TM:
+                primer_length_F += 1
+                TM_F_previous = TM_F
+                target_primer = target_sequence[:primer_length_F]
+            else:
+                print '\n'
+                print TM_F_previous, target_primer
