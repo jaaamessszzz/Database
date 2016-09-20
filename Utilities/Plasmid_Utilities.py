@@ -449,9 +449,12 @@ class Plasmid_Utilities(object):
         buffy = self.generate_ape_file(current_plasmid_entry.get_id(), current_plasmid_entry.sequence, current_plasmid_entry.description, UID = current_plasmid_entry.plasmid_name)
 
         filename = current_plasmid_entry.plasmid_name or current_plasmid_entry.get_id()
+        if isinstance(filename, str):
+            filename = unicode(filename, 'utf-8')
+
         new_plasmid_file_entry = {'creator' : current_plasmid_entry.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
-                                  'file_name' : unicode(filename, 'utf-8'),
+                                  'file_name' : filename,
                                   'file_type' : u'GenBank file',
                                   'Description' : current_plasmid_entry.description,
                                   'File' : buffy
