@@ -149,16 +149,10 @@ class Plasmid_View_Tools(object):
                             saltcorr = 5
                             )
 
-            print target_upper[:primer_length_F]
-            print TM_F
-
             if TM_F < Target_TM:
                 primer_length_F += 1
                 TM_F_previous = TM_F
                 target_primer_F = target_upper[:primer_length_F]
-            else:
-                print '\n'
-                print TM_F_previous, target_primer_F
 
         # Generate Reverse Primer
         while TM_R < Target_TM:
@@ -175,26 +169,21 @@ class Plasmid_View_Tools(object):
                             saltcorr=5
                             )
 
-            print target_upper[-primer_length_R:]
-            print TM_R
-
             if TM_R < Target_TM:
                 primer_length_R += 1
                 TM_R_previous = TM_R
                 target_primer_R = self.plasmid_util.reverse_complement(target_upper[-primer_length_R:])
-            else:
-                print '\n'
-                print TM_R_previous, target_primer_R
 
-        # NOT TESTED YET!!!!11!1!!111!!!!!11!11!11!1
         if left_arm and right_arm:
             for char in left_arm:
                 if char.upper() not in 'ATCG':
-                    rasise
+                    raise Plasmid_Exception('Non-ATCG character in the primer extensions!')
             target_primer_F = left_arm.upper() + target_primer_F
             target_primer_R = self.plasmid_util.reverse_complement(right_arm).upper() + target_primer_R
+
+            return target_primer_F, target_primer_R
         elif left_arm == None and right_arm == None:
-            pass
+            return target_primer_F, target_primer_R
         else:
             raise Plasmid_Exception('You need to add both the left and right extensions for this to work!')
 
