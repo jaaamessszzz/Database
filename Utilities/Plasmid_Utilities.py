@@ -350,7 +350,7 @@ class Plasmid_Utilities(object):
                 'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
 
-    def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = True):
+    def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = False):
         '''
         :param user_input:
         :param table_info:
@@ -382,7 +382,7 @@ class Plasmid_Utilities(object):
         return current_plasmid_entry
 
 
-    def add_cassette_plasmid_to_db(self, input_dict, table_info, auto_commit = True):
+    def add_cassette_plasmid_to_db(self, input_dict, table_info, auto_commit = False):
 
         current_plasmid_entry = Plasmid.add(self.tsession, input_dict, silent=False)
 
