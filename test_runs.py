@@ -154,9 +154,12 @@ def main():
     # generate_part_plasmids(asdf, tsession)
     # qwer.get_plasmid_indicies(('JL', '17'))
 
-    asdf.generate_ape_from_database_ID('JL', '1', write_to_file=True)
+    # asdf.generate_ape_from_database_ID('JL', '1', write_to_file=True)
     # generate_cassette_plasmids(asdf, dbi, tsession)
     # generate_part_plasmids(asdf, dbi, tsession)
+
+    qwer.generate_primers('AGCGGATAACAATTTCACACAGGAAGCGGATAACAATTTCACACAGGA', 65)
+
     tsession.close()
 
     ### Generate a Mutant Plasmid Feature and Associated .ape file, push to database
