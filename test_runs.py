@@ -158,7 +158,7 @@ def main():
     # generate_cassette_plasmids(asdf, dbi, tsession)
     # generate_part_plasmids(asdf, dbi, tsession)
 
-    qwer.generate_primers('AGCGGATAACAATTTCACACAGGAAGCGGATAACAATTTCACACAGGA', 65)
+    qwer.generate_primers('AGCGGATAACAATTTCACACAGGAAGCGGATAACAATTTCACACAGGA', 65, left_arm="GGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGC", right_arm='ATATATATATATATATATATATATATATATATATATATATTATA')
 
     tsession.close()
 
