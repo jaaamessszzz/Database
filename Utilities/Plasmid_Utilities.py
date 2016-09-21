@@ -181,10 +181,11 @@ class Plasmid_Utilities(object):
         if intermediate[-4:] != intermediate[:4]:
             raise Plasmid_Exception('Incomplete assembly! This assembly does not produce a circular plasmid! :(')
 
-        table_info['Complete Assembly'] = intermediate[:-4].upper()
+        table_info['Complete Assembly'] = intermediate[4:].upper()
         table_info['Complete Description'] = ' | '.join(table_info['Description'])
 
         return table_info
+
 
     def fetch_cassette_parts(self, input_sequences, table_info=None):
         # Get sequences and part numbers for listed part plasmids
@@ -350,7 +351,7 @@ class Plasmid_Utilities(object):
                 'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
 
-    def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = True):
+    def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = False):
         '''
         :param user_input:
         :param table_info:
@@ -382,7 +383,7 @@ class Plasmid_Utilities(object):
         return current_plasmid_entry
 
 
-    def add_cassette_plasmid_to_db(self, input_dict, table_info, auto_commit = True):
+    def add_cassette_plasmid_to_db(self, input_dict, table_info, auto_commit = False):
 
         current_plasmid_entry = Plasmid.add(self.tsession, input_dict, silent=False)
 
