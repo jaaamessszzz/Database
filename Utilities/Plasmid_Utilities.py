@@ -186,6 +186,7 @@ class Plasmid_Utilities(object):
 
         return table_info
 
+
     def fetch_cassette_parts(self, input_sequences, table_info=None):
         # Get sequences and part numbers for listed part plasmids
 

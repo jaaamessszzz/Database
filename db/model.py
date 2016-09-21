@@ -1,4 +1,5 @@
 import pprint
+import re
 
 import numpy
 
@@ -15,6 +16,21 @@ DeclarativeBasePlasmid = declarative_base()
 
 from klab import colortext
 from klab.bio.basics import translate_codons
+
+
+# todo: this should be moved into the klab repository e.g. klab/bio/dna.py
+class NotDNAException(Exception): pass
+def reverse_complement(input_sequence):
+    base_pair = {
+        'A': 'T',
+        'T': 'A',
+        'C': 'G',
+        'G': 'C'
+        }
+    try:
+        return ''.join(reversed([base_pair[base.upper()] for base in input_sequence]))
+    except:
+        raise NotDNAException('The sequence is not a DNA (ACGT) sequence.')
 
 
 def row_to_dict(r, keep_relationships = False):
@@ -163,7 +179,7 @@ class Plasmid(DeclarativeBasePlasmid):
         return 'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
-    def get_details(self, tsession):
+    def get_details(self, tsession, plasmid_util = None):
         '''.'''
         d = row_to_dict(self)
 
@@ -190,6 +206,33 @@ class Plasmid(DeclarativeBasePlasmid):
         if plasmid_features.count() > 0:
             for pf in plasmid_features:
                 d['features'].append(pf.get_details(tsession))
+
+
+        # todo: add all relevant information to part index list (only name and indicies so far)
+        part_indices_list = None
+        if self.plasmid_type.lower() == 'cassette' and plasmid_util:
+            # todo: This is terrible design - plasmid_util should not be an argument to this function.
+            #       The logic below probably belongs in this module
+            #       Also, does fetch_cassette_parts work as expected?
+
+            part_indices_list = []
+            # List of [part_name, (starting_index, ending_index)]
+
+            cassette_parts = tsession.query(Cassette_Assembly, Plasmid) \
+                .filter(and_(self.creator == Cassette_Assembly.Cassette_creator,
+                             self.creator_entry_number == Cassette_Assembly.Cassette_creator_entry_number,
+                             Plasmid.creator == Cassette_Assembly.Part_creator,
+                             Plasmid.creator_entry_number == Cassette_Assembly.Part_creator_entry_number))
+
+            for cassette_assembly, plasmid in cassette_parts:
+                # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
+                print('***' , plasmid_util.fetch_cassette_parts([(self.creator, self.creator_entry_number)]))
+                part_sequence = plasmid_util.fetch_cassette_parts([(self.creator, self.creator_entry_number)])[4:-4]
+
+                for part in part_sequence:
+                    for instance in re.finditer(part.upper().strip(), self.sequence):
+                        part_indices_list.append([plasmid.description, (instance.start(), instance.end())])
+        d['part_indices'] = part_indices_list
 
         # Retrieve the list of plasmid type-specific details
         d['details'] = None
@@ -313,9 +356,11 @@ class Feature(DeclarativeBasePlasmid):
 
     Feature_name = Column(Unicode(200, collation="utf8_bin"), nullable=False, primary_key=True)
     MD5_hash = Column(String(64), nullable=True)
-    Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False)
+    Feature_type = Column(Unicode(200, collation="utf8_bin"), ForeignKey('Feature_Type.Feature_type'), nullable=False)
     Feature_sequence = Column(Text(collation="utf8_bin"), nullable=True)
     description = Column(Text(collation="utf8_bin"))
+
+    ftype = relationship('Feature_Type', primaryjoin='Feature_Type.Feature_type == Feature.Feature_type')
 
 
     def get_details(self, tsession):
@@ -460,16 +505,61 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     _derived_or_generated_fields = ['ID']
 
     ID = Column(Integer, nullable=False, primary_key=True)
-    creator_entry_number = Column(Integer, nullable=False)
-    creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
+    creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Plasmid.creator'), nullable=False)
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False)
     feature_name = Column(Unicode(200, collation="utf8_bin"), ForeignKey('Feature.Feature_name'), nullable=False)
 
     feature = relationship('Feature', viewonly = True, primaryjoin = "Plasmid_Feature.feature_name==Feature.Feature_name")
+    plasmid = relationship('Plasmid', viewonly = True, primaryjoin = 'and_(Plasmid.creator == Plasmid_Feature.creator, Plasmid.creator_entry_number == Plasmid_Feature.creator_entry_number)')
 
 
     def get_details(self, tsession):
         '''Returns details about a feature.'''
-        return self.feature.get_details(tsession)
+        feature_details = self.feature.get_details(tsession)
+        plasmid_sequence = self.plasmid.sequence
+        feature_sequence = self.feature.Feature_sequence.upper().strip()
+        feature_type = self.feature.ftype
+        indices = []
+
+        for instance in re.finditer(feature_sequence, plasmid_sequence):
+            if self.feature.Feature_type == 'Restrxn Type II':
+                indices.append(dict(
+                    name = self.feature_name + ' F',
+                    start = instance.start(),
+                    end = instance.end(),
+                ))
+                indices.append(dict(
+                    name = self.feature_name + ' Overhang',
+                    start = instance.start() + 7,
+                    end = instance.start() + 11,
+                ))
+            else:
+                indices.append(dict(
+                        name = self.feature_name,
+                        start = instance.start(),
+                        end = instance.end(),
+                ))
+
+        for instance in re.finditer(reverse_complement(feature_sequence), plasmid_sequence):
+            if self.feature.Feature_type == 'Restrxn Type II':
+                indices.append(dict(
+                        name = self.feature_name + ' R',
+                        start = instance.start(),
+                        end = instance.end(),
+                ))
+                indices.append(dict(
+                        name = self.feature_name + ' Overhang',
+                        start = instance.start() - 5,
+                        end = instance.start() - 1,
+                ))
+            else:
+                indices.append(dict(
+                        name = self.feature_name,
+                        start = instance.start(),
+                        end = instance.end(),
+                ))
+        feature_details['indices'] = indices
+        return feature_details
 
 
     @staticmethod
@@ -488,6 +578,7 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
             return db_record_object
         except:
             raise
+
 
 class Cassette_Connector(DeclarativeBasePlasmid):
     __tablename__ = 'Cassette_Connector'
