@@ -181,7 +181,7 @@ class Plasmid_Utilities(object):
         if intermediate[-4:] != intermediate[:4]:
             raise Plasmid_Exception('Incomplete assembly! This assembly does not produce a circular plasmid! :(')
 
-        table_info['Complete Assembly'] = intermediate[:-4].upper()
+        table_info['Complete Assembly'] = intermediate[4:].upper()
         table_info['Complete Description'] = ' | '.join(table_info['Description'])
 
         return table_info
