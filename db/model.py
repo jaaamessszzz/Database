@@ -423,8 +423,8 @@ class Multicassette_Plasmid(DeclarativeBasePlasmid):
 
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
-    resistance = Column(Unicode(100), nullable=False)
-    Origin = Column(Unicode(100, collation="utf8_bin"), nullable=False)
+    Backbone_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False, primary_key=True)
+    Backbone_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
 
     @staticmethod
     def add(tsession, input_dict, silent=True):

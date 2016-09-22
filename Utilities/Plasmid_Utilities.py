@@ -13,11 +13,11 @@ sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
-    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
-    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid
 
 class Plasmid_Exception(Exception): pass
 
@@ -110,15 +110,7 @@ class Plasmid_Utilities(object):
         '''
         This function will take user input of a list of plasmids and attempt to perform a golden gate assembly.
 
-        class user_input(object):
-            def __init__(self, creator, input_sequences, assembly_type, UID, location):
-                self.creator = creator (creator initials)
-                self.input_sequences = input_sequences (user defined names of input plasmids for assembly)
-                self.assembly_type = assembly_type (type of assembly e.g. part, cassette, multicassette)
-                self.UID = UID (user defined name for the assembled plasmid)
-                self.location = location (where is the user planning on putting this new plasmid)
-
-        :return: complete plasmid assembly as string
+        :return:
         '''
 
         table_info = {}
@@ -126,15 +118,6 @@ class Plasmid_Utilities(object):
         table_info['Part list ID'] = []
         table_info['Description'] = []
         table_info['Connectors'] = {}
-
-        # Start with Part one (cassette assembly) so that there is consistency in how the plasmids are assembled
-        if assembly_type.lower() == 'cassette':
-            table_info = self.fetch_cassette_parts(input_sequences, table_info)
-            for part in table_info['Part list']:
-                if part[:4].upper() == 'CCCT':
-                    intermediate = part.upper()
-                    table_info['Part list'].remove(part)
-                    break
 
         if assembly_type.lower() == 'part':
             # Checks that part 3s have len % 3 = 0 and do not contain a starting MET or stop codon anywhere
@@ -158,15 +141,27 @@ class Plasmid_Utilities(object):
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             intermediate = part_entry_vector.sequence[ : (part_entry_vector.sequence.upper().find('GAGACG') - 1) ]
 
-        # if user_input.assembly_type == 'Multicassette':
-        #     site_F = 'CGTCTC'
-        #     site_R = 'GAGACG'
-        #
-        #     for part in part_list:
-        #         if part[:4].upper() == 'CTGA':
-        #             intermediate = part.upper()
-        #             table_info['Part list'].remove(part)
-        #             break
+        # Start with Part one (cassette assembly) so that there is consistency in how the plasmids are assembled
+        if assembly_type.lower() == 'cassette':
+            table_info = self.fetch_cassette_parts(input_sequences, table_info)
+            for part in table_info['Part list']:
+                if part[:4].upper() == 'CCCT':
+                    intermediate = part.upper()
+                    table_info['Part list'].remove(part)
+                    break
+
+        # Start with Part one (cassette assembly) so that there is consistency in how the plasmids are assembled
+        if assembly_type.lower() == 'multicassette':
+            table_info = self.fetch_mulitcassette_cassettes(input_sequences, table_info)
+
+            import pprint
+            pprint.pprint(table_info)
+
+            for part in table_info['Part list']:
+                if part[:4].upper() == 'CTGA':
+                    intermediate = part.upper()
+                    table_info['Part list'].remove(part)
+                    break
 
         assembly_step = 0
         assembly_steps = len(table_info['Part list'])
@@ -185,6 +180,34 @@ class Plasmid_Utilities(object):
         table_info['Complete Description'] = ' | '.join(table_info['Description'])
 
         return table_info
+
+
+    def add_part_arms(self, sequence, part_type):
+        # Some of the overhangs aren't added yet since I don't have access to APE at the moment...
+        arm_dict = {'1': ['', ''],
+                    '2': ['gcatCGTCTCaAGCAGGTCTCAAACG', 'TATGtGAGACCtGAGACGgcat'],
+                    # '2a' : ['', ''],
+                    #  '2b' : ['', ''],
+                    '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'ATCCtGAGACCtGAGACGgcat'],
+                    '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGCTTCTtGAGACCtGAGACGgcat'],
+                    '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'ATCCtGAGACCtGAGACGgcat'],
+                    '4': ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
+                    # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
+                    #  '4b' : ['', 'GCTGtGAGACCtGAGACGgcat'],
+                    '5': ['', ''],
+                    '6': ['gcatCGTCTCaAGCAGGTCTCA', 'TGAGACCtGAGACGgcat'],
+                    '7': ['', '']
+                    }
+
+        try:
+            part_sequence = arm_dict[part_type][0] + sequence + arm_dict[part_type][1]
+            if part_sequence.upper().find('CGTCTC') == -1 or part_sequence.upper().find('GAGACG') == -1:
+                raise Plasmid_Exception('BsmBI sites not found! Something fishy is going on...')
+
+        except:
+            raise Plasmid_Exception('%s part types are not supported yet!' % part_type)
+
+        return part_sequence.upper()
 
 
     def fetch_cassette_parts(self, input_sequences, table_info=None):
@@ -217,9 +240,9 @@ class Plasmid_Utilities(object):
             sequence_upper = plasmid.sequence.upper()
 
             if sequence_upper.count(site_F) != 1:
-                raise Plasmid_Exception('There is more than one forward %s site in %s! %s' % (restriction_enzyme, plasmid.plasmid_name, plasmid.sequence.count(site_F)))
+                raise Plasmid_Exception('There is more than one forward %s site in %s! %s' % (restriction_enzyme, plasmid.plasmid_name or plasmid.get_id(), plasmid.sequence.count(site_F)))
             if sequence_upper.count(site_R) != 1:
-                raise Plasmid_Exception('There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name))
+                raise Plasmid_Exception('There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name or plasmid.get_id()))
 
             left_overhang = part_type.overhang_5
             right_overhang = part_type.overhang_3
@@ -269,32 +292,61 @@ class Plasmid_Utilities(object):
         else:
             return part_sequences
 
-    def add_part_arms(self, sequence, part_type):
-        # Some of the overhangs aren't added yet since I don't have access to APE at the moment...
-        arm_dict = {'1'  : ['', ''],
-                    '2'  : ['gcatCGTCTCaAGCAGGTCTCAAACG', 'TATGtGAGACCtGAGACGgcat'],
-                    # '2a' : ['', ''],
-                    #  '2b' : ['', ''],
-                    '3'  : ['gcatCGTCTCaAGCAGGTCTCaTATG', 'ATCCtGAGACCtGAGACGgcat'],
-                    '3a' : ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGCTTCTtGAGACCtGAGACGgcat'],
-                    '3b' : ['gcatCGTCTCaAGCAGGTCTCATTCT', 'ATCCtGAGACCtGAGACGgcat'],
-                    '4'  : ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
-                    # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
-                    #  '4b' : ['', 'GCTGtGAGACCtGAGACGgcat'],
-                    '5'  : ['', ''],
-                    '6'  : ['gcatCGTCTCaAGCAGGTCTCA', 'TGAGACCtGAGACGgcat'],
-                    '7'  : ['', '']
-                    }
 
-        try:
-            part_sequence = arm_dict[part_type][0] + sequence + arm_dict[part_type][1]
-            if part_sequence.upper().find('CGTCTC') == -1 or part_sequence.upper().find('GAGACG') == -1:
-                raise Plasmid_Exception('BsmBI sites not found! Something fishy is going on...')
+    def fetch_mulitcassette_cassettes(self, input_sequences, table_info=None):
+        # Get sequences for cassettes in input_sequences
+        restriction_enzyme = 'BsmBI'
+        site_F = 'CGTCTC'
+        site_R = 'GAGACG'
 
-        except:
-            raise Plasmid_Exception('%s part types are not supported yet!' %part_type)
+        cassettee_IDs = [and_(Plasmid.creator == cassette_creator, Plasmid.creator_entry_number == cassette_creator_entry_number) for
+                    (cassette_creator, cassette_creator_entry_number) in input_sequences]
 
-        return part_sequence.upper()
+        cassette_plasmids_query = self.tsession.query(Plasmid, Cassette_Plasmid) \
+            .filter(and_(Cassette_Plasmid.creator == Plasmid.creator,
+                         Cassette_Plasmid.creator_entry_number == Plasmid.creator_entry_number,
+                         or_(*cassettee_IDs)
+                         )
+                    )
+
+        part_sequences = []
+
+        for plasmid, cassette_plasmid in cassette_plasmids_query:
+
+            print "%s\t%s\t%s\t%s" % (
+                cassette_plasmid.creator, cassette_plasmid.creator_entry_number, cassette_plasmid.left_overhang, cassette_plasmid.right_overhang)
+
+            sequence_upper = plasmid.sequence.upper()
+
+            if sequence_upper.count(site_F) != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! %s' % (restriction_enzyme, plasmid.plasmid_name or plasmid.get_id(), plasmid.sequence.count(site_F)))
+            if sequence_upper.count(site_R) != 1:
+                raise Plasmid_Exception('There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name or plasmid.get_id()))
+
+            left_overhang = cassette_plasmid.left_overhang
+            right_overhang = cassette_plasmid.right_overhang
+
+            site_F_position = sequence_upper.find(left_overhang, sequence_upper.find(site_F))
+            site_R_position = sequence_upper.find(right_overhang, sequence_upper.find(site_R) - 10) + 4
+
+            # Circular permutation so that forward cut site is always upstream of reverse cut site in linear sequence
+            if site_F_position > site_R_position:
+                sequence_upper = sequence_upper[site_R_position + 8:] + sequence_upper[:site_R_position + 8]
+
+            if table_info:
+                table_info['Part list'].append(sequence_upper[
+                                               sequence_upper.find(left_overhang, sequence_upper.find(site_F)):
+                                               sequence_upper.find(right_overhang,
+                                                                   sequence_upper.find(site_R) - 10) + 4
+                                               ])
+                table_info['Description'].append(plasmid.description)
+                table_info['Part list ID'].append((plasmid.creator, plasmid.creator_entry_number))
+            part_sequences.append(sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang, sequence_upper.find(site_R) - 10) + 4])
+
+        if table_info:
+            return table_info
+        else:
+            return part_sequences
 
 
     def plasmid_checks(self, input_dict, assembly_type, part_type = None):
@@ -343,12 +395,10 @@ class Plasmid_Utilities(object):
 
         if assembly_type.lower() == 'multicassette':
             # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
-            if input_dict['sequence'].count('GGTCTC') != 1:
-                raise Plasmid_Exception('There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
-                'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GGTCTC'), 'BsaI'))
-            if input_dict['sequence'].count('GAGACC') != 1:
-                raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
-                'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
+            if input_dict['sequence'].count('CGTCTC') != 0:
+                raise Plasmid_Exception('There is a forward BsmBI site in your assembled plasmid. Get rid of it!!!')
+            if input_dict['sequence'].count('GAGACG') != 0:
+                raise Plasmid_Exception('There is a reverse BsmBI site in your assembled plasmid. Get rid of it!!!')
 
 
     def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = False):
@@ -391,16 +441,14 @@ class Plasmid_Utilities(object):
         left_connector = self.tsession.query(Cassette_Connector)\
             .filter(and_(Cassette_Connector.creator == table_info['Connectors']['1'][0],
                          Cassette_Connector.creator_entry_number == table_info['Connectors']['1'][1])
-                    )
+                    ).one()
         right_connector = self.tsession.query(Cassette_Connector)\
             .filter(and_(Cassette_Connector.creator == table_info['Connectors']['5'][0],
                          Cassette_Connector.creator_entry_number == table_info['Connectors']['5'][1])
-                    )
+                    ).one()
 
-        for left_query in left_connector:
-            left_connector_overhang = left_query.overhang
-        for right_query in right_connector:
-            right_connector_overhang = right_query.overhang
+        left_connector_overhang = left_connector.overhang
+        right_connector_overhang = right_connector.overhang
 
         new_cassette_plasmid_entry = {'creator' : current_plasmid_entry.creator,
                                       'creator_entry_number' : current_plasmid_entry.creator_entry_number,
@@ -420,6 +468,46 @@ class Plasmid_Utilities(object):
                                            'Part_creator_entry_number' : constituent_part[2]
                                            }
             Cassette_Assembly.add(self.tsession, new_cassette_assembly_entry, silent=False)
+
+        self.add_features(current_plasmid_entry)
+        self.upload_file(current_plasmid_entry)
+
+        if auto_commit:
+            self.tsession.commit()
+
+        return current_plasmid_entry
+
+
+    def add_multicassette_plasmid_to_db(self, input_dict, table_info, auto_commit=False):
+
+        current_plasmid_entry = Plasmid.add(self.tsession, input_dict, silent=False)
+        mulitcassette_plasmid_added = False
+
+        for constituent_part in table_info['Part list ID']:
+            overhangs = self.tsession.query(Cassette_Plasmid).filter(and_(Cassette_Plasmid.creator == constituent_part[0], Cassette_Plasmid.creator_entry_number == constituent_part[1])).one()
+
+            if overhangs.left_connector_part == 'BS' and overhangs.right_connector_part == 'BE':
+                new_multicassette_plasmid_entry = {'creator': current_plasmid_entry.creator,
+                                              'creator_entry_number': current_plasmid_entry.creator_entry_number,
+                                              'Backbone_creator': overhangs.creator,
+                                              'Backbone_creator_entry_number': overhangs.creator_entry_number,
+                                              }
+
+                Multicassette_Plasmid.add(self.tsession, new_multicassette_plasmid_entry, silent=False)
+                mulitcassette_plasmid_added = True
+
+            new_multicassette_assembly_entry = {'Multicassette_creator': current_plasmid_entry.creator,
+                                                'Multicassette_creator_entry_number': current_plasmid_entry.creator_entry_number,
+                                                'Left_connector' : overhangs.left_overhang,
+                                                'Right_connector' : overhangs.right_overhang,
+                                                'Cassette_creator': constituent_part[0],
+                                                'Cassette_creator_entry_number': constituent_part[1]
+                                                }
+
+            Multicassette_Assembly.add(self.tsession, new_multicassette_assembly_entry, silent=False)
+
+        if not mulitcassette_plasmid_added:
+            raise
 
         self.add_features(current_plasmid_entry)
         self.upload_file(current_plasmid_entry)

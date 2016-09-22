@@ -135,12 +135,30 @@ def generate_cassette_plasmids(asdf):
 
     # asdf.add_cassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
 
-def main():
+def generate_multicassette_plasmids(asdf):
 
-    class make_mutations(object):
-        def __init__(self, Plasmid_Feature_ID, mutation_list):
-            self.Plasmid_Feature_ID = Plasmid_Feature_ID
-            self.mutation_list = mutation_list
+    assembly_type = 'multicassette'
+    input_sequences = [('JL', 21), ('JL', 22), ('JL', 19)]
+
+    table_info = asdf.golden_gate_assembly(input_sequences, assembly_type)
+
+    input_dict = {'creator': 'JL',
+                  'plasmid_name': 'pJLTEST2',
+                  'plasmid_type': assembly_type,
+                  'location': 'Mah box',
+                  'description': table_info['Complete Description'],
+                  'sequence': table_info['Complete Assembly'],
+                  'status': 'designed'
+                  }
+
+    asdf.plasmid_checks(input_dict, assembly_type)
+
+    import pprint
+    pprint.pprint(input_dict['sequence'])
+
+    asdf.add_multicassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
+
+def main():
 
     # Create up the database session
     dbi = DatabaseInterface()
@@ -149,18 +167,23 @@ def main():
     asdf = Plasmid_Utilities(tsession)
     qwer = Plasmid_View_Tools(tsession)
 
-    # asdf.generate_ape_from_database_ID(tsession, 'AG', '3', write_to_file=True)
-    # generate_cassette_plasmids(asdf)
-    # generate_part_plasmids(asdf, tsession)
     # qwer.get_plasmid_indicies(('JL', '17'))
-
     # asdf.generate_ape_from_database_ID('JL', '1', write_to_file=True)
-    # generate_cassette_plasmids(asdf, dbi, tsession)
-    # generate_part_plasmids(asdf, dbi, tsession)
+    # generate_part_plasmids(asdf)
+    # generate_cassette_plasmids(asdf)
+    generate_multicassette_plasmids(asdf)
 
-    qwer.generate_primers('AGCGGATAACAATTTCACACAGGAAGCGGATAACAATTTCACACAGGA', 65, left_arm="GGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGC", right_arm='ATATATATATATATATATATATATATATATATATATATATTATA')
-
-    tsession.close()
+    ### Generate Primers for a given sequence and TM
+    # target_primer_F, target_primer_R = qwer.generate_primers('ggcgtcatgactgatgtccaccggcgcttcctccagttgctgatgacgcatggcgtgctagaggaatgggacgtgaagcgcttgcagacgcactgctacaaggtccatgaccgcaatgccaccgtagataagttggaggacttcatcaacaacattaacagtgtcttggagtccttgtatattgagataaagagaggagtcacggaagatgatggcagacccatttatgcgttggtgaatcttgctacaacttcaatttccaaaatggctacggattttgcagagaatgaactggatttgtttagaaaggctctggaactgattattgactcagaaaccggctttgcgtcttccacaaacatattgaacctggttgatcaacttaaaggcaagaagatgaggaagaaggaagcggagcaggtgctgcagaagtttgttcaaaacaagtggctgattgagaaggaaggggagttcaccctgcacggccgggccatcctggagatggagcaatacatccgggaaacgtaccccgacgcggtgaagatctgcaatatctgtcacagcctcctcatccagggtcaaagctgcgaaacctgtgggatcaggatgcacttaccctgcgtggccaagtacttccagtcgaatgctgaaccgcgctgcccccactgcaacgactactggccccacgagatcccaaaagtcttcgaccctgag',
+    #                                                          60,
+    #                                                          left_arm='gcatCGTCTCaAGCAGGTCTCATTCT', # 5' -> 3'
+    #                                                          right_arm='taaATCCtGAGACCtGAGACGgcat'  # 5' -> 3'
+    #                                                          )
+    # With defaults at TM = 60
+    # F Generated: GCATCGTCTCAAGCAGGTCTCATTCTGGCGTCATGACTGATGTCCACC
+    # F Designed : gcatCGTCTCaAGCAGGTCTCATTCTGGCGTCATGACTGATGTCCACC
+    # R Generated: ATGCCGTCTCAGGTCTCAGGATTTACTCAGGGTCGAAGACTTTTGGGA
+    # R Designed : atgcCGTCTCaGGTCTCaGGATttaCTCAGGGTCGAAGACTTTTGGGAT
 
     ### Generate a Mutant Plasmid Feature and Associated .ape file, push to database
     # Plasmid_Feature_ID = 984 # WT 1F10 Chain 1/B
@@ -168,6 +191,7 @@ def main():
     # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
     # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False )
 
+    tsession.close()
 
 if __name__ == '__main__':
     main()
