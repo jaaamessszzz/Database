@@ -401,6 +401,23 @@ class Multicassette_Assembly(DeclarativeBasePlasmid):
     Cassette_creator = Column(Unicode(5, collation="utf8_bin"), nullable=False)
 
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Multicassette_Assembly(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
+
 class Multicassette_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Multicassette_Plasmid'
 
@@ -409,6 +426,22 @@ class Multicassette_Plasmid(DeclarativeBasePlasmid):
     resistance = Column(Unicode(100), nullable=False)
     Origin = Column(Unicode(100, collation="utf8_bin"), nullable=False)
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Multicassette_Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
 
 class Origin(DeclarativeBasePlasmid):
     __tablename__ = 'Origin'
