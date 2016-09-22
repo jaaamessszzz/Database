@@ -1,5 +1,6 @@
 import pprint
 import re
+import traceback
 
 import numpy
 
@@ -245,8 +246,11 @@ class Plasmid(DeclarativeBasePlasmid):
             except:
                 d['errors'].append('This part plasmid is missing a Part_Plasmid record so the resistance is unknown.')
             try:
-                part_numbers = sorted([r.part_number for r in tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number))])
-            except:
+                plasmid_parts = tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number))
+                part_numbers = sorted([r.part_number for r in plasmid_parts])
+            except Exception, e:
+                colortext.warning(str(e))
+                colortext.warning(traceback.format_exc())
                 d['errors'].append('This part plasmid is missing a Part_Plasmid_Part record so the part number is unknown.')
 
             d['printed_plasmid_type'] = '{0} {1}'.format(self.plasmid_type.title(), ', '.join(part_numbers))
@@ -254,6 +258,25 @@ class Plasmid(DeclarativeBasePlasmid):
                 resistance = resistance,
                 part_numbers = part_numbers,
             )
+        elif self.plasmid_type == 'cassette':
+            assert ('part_plasmids' not in d)
+            d['part_plasmids'] = []
+            try:
+                parts_read = {}
+                part_plasmids = tsession.query(Cassette_Assembly).filter(and_(Cassette_Assembly.Cassette_creator == self.creator, Cassette_Assembly.Cassette_creator_entry_number == self.creator_entry_number)).order_by(Cassette_Assembly.Part_number)
+                for pp in part_plasmids:
+                    pp_id = (pp.Part_creator, pp.Part_creator_entry_number)
+                    if pp_id not in parts_read:
+                        parts_read[pp_id] = True
+                        assert(pp.Part_number not in d['part_plasmids'])
+                        part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
+                        assert(part_plasmid_record.plasmid_type == 'part')
+                        d['part_plasmids'].append(part_plasmid_record.get_details(tsession, plasmid_util = plasmid_util))
+            except Exception, e:
+                colortext.warning(str(e))
+                colortext.warning(traceback.format_exc())
+                d['errors'].append('An error occurred retrieving data for this cassette assembly.')
+
         d['details'] = d['details'] or {}
 
         return d
