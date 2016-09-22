@@ -236,6 +236,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
         # Retrieve the list of plasmid type-specific details
         d['details'] = None
+        d['printed_plasmid_type'] = d['plasmid_type'].title() # used by the website for longer descriptions e.g. "Part 3, 4"
         part_numbers = None
         if self.plasmid_type == 'part':
             resistance, part_number = None, None
@@ -248,6 +249,7 @@ class Plasmid(DeclarativeBasePlasmid):
             except:
                 d['errors'].append('This part plasmid is missing a Part_Plasmid_Part record so the part number is unknown.')
 
+            d['printed_plasmid_type'] = '{0} {1}'.format(self.plasmid_type.title(), ', '.join(part_numbers))
             d['details'] = dict(
                 resistance = resistance,
                 part_numbers = part_numbers,
