@@ -177,7 +177,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
     def get_id(self):
         '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
-        return 'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
+        return u'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
     def get_details(self, tsession):
@@ -235,7 +235,6 @@ class Plasmid(DeclarativeBasePlasmid):
                         part_indices_list.append([cassette_part_plasmid.description, cassette_assembly.Part_number, (instance.start(), instance.end())])
 
         d['part_indices'] = part_indices_list
-        print("d['part_indices']", d['part_indices'])
 
         # Retrieve the list of plasmid type-specific details
         d['details'] = None
@@ -360,7 +359,9 @@ class Plasmid(DeclarativeBasePlasmid):
                                                                                    plasmid.creator_entry_number]
                     already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
 
-            part_sequences.append(sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4])
+            new_part_sequence = sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4]
+            if new_part_sequence not in part_sequences:
+                part_sequences.append(new_part_sequence)
 
         if table_info:
             return table_info
