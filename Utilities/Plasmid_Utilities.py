@@ -411,12 +411,11 @@ class Plasmid_Utilities(object):
         :param auto_commit:
         :return: The created Plasmid object.
         '''
-
         current_plasmid_entry = Plasmid.add(self.tsession, input_dict, silent=True)
 
         new_part_plasmid_entry = {'creator' : current_plasmid_entry.creator,
                                   'creator_entry_number' : current_plasmid_entry.creator_entry_number,
-                                  'resistance' : 'CM'
+                                  'resistance' : u'CM'
                                   }
         Part_Plasmid.add(self.tsession, new_part_plasmid_entry, silent=True)
 
