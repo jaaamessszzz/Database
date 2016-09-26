@@ -285,7 +285,10 @@ class Plasmid_Utilities(object):
                         table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
                                                                                    plasmid.creator_entry_number]
                     already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
-            part_sequences.append(sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4])
+
+            new_part_sequence = sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4]
+            if new_part_sequence not in part_sequences:
+                part_sequences.append(new_part_sequence)
 
         if table_info:
             return table_info
@@ -848,8 +851,11 @@ class Plasmid_Utilities(object):
 
         return genbank_file
 
-
-
+    def update_features(self):
+        all_my_plasmids = self.tsession.query(Plasmid)
+        for plasmid in all_my_plasmids:
+            self.add_features(plasmid)
+        print 'Update Complete!'
 
 
 
