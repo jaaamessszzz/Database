@@ -67,14 +67,14 @@ class Plasmid_View_Tools(object):
 
         # todo: add all relevant information to feature index list (only name and indicies so far)
         for plasmid_feature, feature, feature_type in plasmid_features:
-            for instance in re.finditer(feature.Feature_sequence.upper().strip(), current_plasmid_sequence.sequence):
+            for instance in re.finditer(feature.Feature_sequence.upper().strip(), current_plasmid_sequence.sequence.upper()):
                 if feature.Feature_type == 'Restrxn Type II':
                     feature_indicies_list.append([plasmid_feature.feature_name + ' F', (instance.start(), instance.end())])
                     feature_indicies_list.append([plasmid_feature.feature_name + ' Overhang', (instance.start() + 7, instance.start() + 11)])
                 else:
                     feature_indicies_list.append([plasmid_feature.feature_name, (instance.start(), instance.end())])
 
-            for instance in re.finditer(self.plasmid_util.reverse_complement(feature.Feature_sequence.upper().strip()), current_plasmid_sequence.sequence):
+            for instance in re.finditer(self.plasmid_util.reverse_complement(feature.Feature_sequence.upper().strip()), current_plasmid_sequence.sequence.upper()):
                 if feature.Feature_type == 'Restrxn Type II':
                     feature_indicies_list.append([plasmid_feature.feature_name + ' R', (instance.start(), instance.end()), feature_type.color])
                     feature_indicies_list.append([plasmid_feature.feature_name + ' Overhang', (instance.start() - 5, instance.start() - 1), feature_type.color])
@@ -97,7 +97,7 @@ class Plasmid_View_Tools(object):
                 part_sequence = self.plasmid_util.fetch_cassette_parts([(plasmid.creator, plasmid.creator_entry_number)])[4:-4]
 
                 for part in part_sequence:
-                    for instance in re.finditer(part.upper().strip(), current_plasmid_sequence.sequence):
+                    for instance in re.finditer(part.upper().strip(), current_plasmid_sequence.sequence.upper()):
                         part_indicies_list.append([plasmid.description, (instance.start(), instance.end())])
 
         return feature_indicies_list, part_indicies_list

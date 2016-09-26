@@ -712,10 +712,8 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     def add(tsession, input_dict, silent=True):
         try:
             db_record_object = Plasmid_Feature(**input_dict)
-
             if not silent:
                 colortext.pcyan('Adding this record:')
-                print(db_record_object)
                 print('')
             feature_check = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == db_record_object.creator, Plasmid_Feature.creator_entry_number == db_record_object.creator_entry_number, Plasmid_Feature.feature_name == db_record_object.feature_name))
             if feature_check.count() == 0:

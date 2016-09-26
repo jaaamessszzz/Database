@@ -188,9 +188,9 @@ class Plasmid_Utilities(object):
                     '2': ['gcatCGTCTCaAGCAGGTCTCAAACG', 'TATGtGAGACCtGAGACGgcat'],
                     # '2a' : ['', ''],
                     #  '2b' : ['', ''],
-                    '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'ATCCtGAGACCtGAGACGgcat'],
+                    '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'taaATCCtGAGACCtGAGACGgcat'],
                     '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGCTTCTtGAGACCtGAGACGgcat'],
-                    '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'ATCCtGAGACCtGAGACGgcat'],
+                    '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'taaATCCtGAGACCtGAGACGgcat'],
                     '4': ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
                     # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
                     #  '4b' : ['', 'GCTGtGAGACCtGAGACGgcat'],
@@ -372,8 +372,8 @@ class Plasmid_Utilities(object):
                     raise Plasmid_Exception('There should not be any reverse %s sites in this part type! Your submission %s contains %s reverse %s site(s).' % (
                         'BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACG'), 'BsmBI'))
             if input_dict['sequence'].count('CGTCTC') != 0:
-                raise Plasmid_Exception('There is more than one forward %s site in %s! This plasmid contains %s forward %s sites.' % (
-                    'BsmBI', input_dict['plasmid_name'], input_dict['sequence'].count('CGTCTC'), 'BsmBI'))
+                raise Plasmid_Exception('There should not be any forward %s sites in this part type! This plasmid contains %s forward %s sites.' % (
+                    'BsmBI', input_dict['sequence'].count('CGTCTC'), 'BsmBI'))
             if input_dict['sequence'].count('GGTCTC') != 1:
                 raise Plasmid_Exception('There is more than one forward %s site in %s! Your submission contains %s forward %s sites.' % (
                     'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GGTCTC'), 'BsaI'))
@@ -528,7 +528,8 @@ class Plasmid_Utilities(object):
             record, color in features_query]
         for site in possible_features:
             target = site[2].upper()
-            if current_plasmid_entry.sequence.find(target) != -1 or current_plasmid_entry.sequence.find(self.reverse_complement(target)) != -1:
+            if current_plasmid_entry.sequence.upper().find(target) != -1 or current_plasmid_entry.sequence.upper().find(self.reverse_complement(target)) != -1:
+
                 input_dict = {'creator' : current_plasmid_entry.creator,
                               'creator_entry_number' : current_plasmid_entry.creator_entry_number,
                               'feature_name' : site[0]
@@ -854,6 +855,7 @@ class Plasmid_Utilities(object):
         all_my_plasmids = self.tsession.query(Plasmid)
         for plasmid in all_my_plasmids:
             self.add_features(plasmid)
+        self.tsession.commit()
         print 'Update Complete!'
 
 
