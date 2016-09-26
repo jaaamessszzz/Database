@@ -224,15 +224,15 @@ class Plasmid(DeclarativeBasePlasmid):
 
             print('*!' * 100)
             print(cassette_parts)
-            for cassette_assembly, plasmid in cassette_parts:
+            for cassette_assembly, cassette_part_plasmid in cassette_parts:
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
                 print('***')
                 print(row_to_dict(cassette_assembly))
-                part_sequence = self.fetch_cassette_parts(tsession, [(plasmid.creator, plasmid.creator_entry_number)])
+                part_sequence = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
                 if len(part_sequence) == 1:
                     part_sequence = part_sequence[0][4:-4]
                     for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
-                        part_indices_list.append([plasmid.description, cassette_assembly.Part_number, (instance.start(), instance.end())])
+                        part_indices_list.append([cassette_part_plasmid.description, cassette_assembly.Part_number, (instance.start(), instance.end())])
 
         d['part_indices'] = part_indices_list
         print("d['part_indices']", d['part_indices'])
