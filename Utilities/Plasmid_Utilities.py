@@ -381,7 +381,7 @@ class Plasmid_Utilities(object):
                 raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
                     'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
-        if assembly_type.lower() == 'cassette':
+        elif assembly_type.lower() == 'cassette':
             if input_dict['sequence'].count('GGTCTC') != 0:
                 raise Plasmid_Exception('There are BsaI sites in your completed cassette assembly! This thing is going to get wrecked during the final digestion step of the Golden Gate Assembly!')
             if input_dict['sequence'].count('GAGACC') != 0:
@@ -396,12 +396,16 @@ class Plasmid_Utilities(object):
             # if input_dict['sequence'].count('GAGACG') != 2:
             #     raise Plasmid_Exception('There should only be two reverse %s sites in a cassette assembly. Your submission contains %s reverse %s sites.' % ('BsmBI', input_dict['sequence'].count('GAGACG'), 'BsmBI'))
 
-        if assembly_type.lower() == 'multicassette':
+        elif assembly_type.lower() == 'multicassette':
             # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
             if input_dict['sequence'].count('CGTCTC') != 0:
                 raise Plasmid_Exception('There is a forward BsmBI site in your assembled plasmid. Get rid of it!!!')
             if input_dict['sequence'].count('GAGACG') != 0:
                 raise Plasmid_Exception('There is a reverse BsmBI site in your assembled plasmid. Get rid of it!!!')
+
+        else:
+            # This forces assembly_type to be passed correctly. Shane wrote a bug by not passing this argument in correctly.
+            assert(assembly_type.lower() == 'other')
 
 
     def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = False):
