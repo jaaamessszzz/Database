@@ -180,7 +180,7 @@ class Plasmid(DeclarativeBasePlasmid):
         return 'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
-    def get_details(self, tsession, plasmid_util = None):
+    def get_details(self, tsession):
         '''.'''
         d = row_to_dict(self)
 
@@ -211,10 +211,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
         # todo: add all relevant information to part index list (only name and indicies so far)
         part_indices_list = None
-        if self.plasmid_type.lower() == 'cassette' and plasmid_util:
-            # todo: This is terrible design - plasmid_util should not be an argument to this function.
-            #       The logic below probably belongs in this module
-            #       Also, does fetch_cassette_parts work as expected?
+        if self.plasmid_type.lower() == 'cassette':
 
             part_indices_list = []
             # List of [part_name, (starting_index, ending_index)]
@@ -225,15 +222,20 @@ class Plasmid(DeclarativeBasePlasmid):
                              Plasmid.creator == Cassette_Assembly.Part_creator,
                              Plasmid.creator_entry_number == Cassette_Assembly.Part_creator_entry_number))
 
+            print('*!' * 100)
+            print(cassette_parts)
             for cassette_assembly, plasmid in cassette_parts:
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
-                print('***' , plasmid_util.fetch_cassette_parts([(self.creator, self.creator_entry_number)]))
-                part_sequence = plasmid_util.fetch_cassette_parts([(self.creator, self.creator_entry_number)])[4:-4]
+                print('***')
+                print(row_to_dict(cassette_assembly))
+                part_sequence = self.fetch_cassette_parts(tsession, [(plasmid.creator, plasmid.creator_entry_number)])
+                if len(part_sequence) == 1:
+                    part_sequence = part_sequence[0][4:-4]
+                    for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
+                        part_indices_list.append([plasmid.description, cassette_assembly.Part_number, (instance.start(), instance.end())])
 
-                for part in part_sequence:
-                    for instance in re.finditer(part.upper().strip(), self.sequence):
-                        part_indices_list.append([plasmid.description, (instance.start(), instance.end())])
         d['part_indices'] = part_indices_list
+        print("d['part_indices']", d['part_indices'])
 
         # Retrieve the list of plasmid type-specific details
         d['details'] = None
@@ -271,7 +273,7 @@ class Plasmid(DeclarativeBasePlasmid):
                         assert(pp.Part_number not in d['part_plasmids'])
                         part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
                         assert(part_plasmid_record.plasmid_type == 'part')
-                        d['part_plasmids'].append(part_plasmid_record.get_details(tsession, plasmid_util = plasmid_util))
+                        d['part_plasmids'].append(part_plasmid_record.get_details(tsession))
             except Exception, e:
                 colortext.warning(str(e))
                 colortext.warning(traceback.format_exc())
@@ -280,6 +282,91 @@ class Plasmid(DeclarativeBasePlasmid):
         d['details'] = d['details'] or {}
 
         return d
+
+
+
+    def fetch_cassette_parts(self, tsession, input_sequences, table_info=None):
+        # Get sequences and part numbers for listed part plasmids
+
+        part_IDs = [and_(Plasmid.creator == part_creator, Plasmid.creator_entry_number == part_creator_entry_number) for (part_creator, part_creator_entry_number) in input_sequences]
+        part_plasmids_query = tsession.query(Plasmid, Part_Plasmid, Part_Plasmid_Part, Part_Type) \
+            .filter(and_(Part_Plasmid.creator == Plasmid.creator,
+                         Part_Plasmid.creator_entry_number == Plasmid.creator_entry_number,
+                         Part_Plasmid.creator == Part_Plasmid_Part.creator,
+                         Part_Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number,
+                         Part_Plasmid_Part.part_number == Part_Type.part_number,
+                         or_(*part_IDs)
+                         )
+                    )
+
+        restriction_enzyme = 'BsaI'
+        site_F = 'GGTCTC'
+        site_R = 'GAGACC'
+
+        already_fetched_cassettes = []
+        part_sequences = []
+
+        for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
+
+            print "%s\t%s\t%s\t%s" % (
+            plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
+
+            sequence_upper = plasmid.sequence.upper()
+
+            if sequence_upper.count(site_F) != 1:
+                raise Plasmid_Exception('There is more than one forward %s site in %s! %s' % (restriction_enzyme, plasmid.plasmid_name or plasmid.get_id(), plasmid.sequence.count(site_F)))
+            if sequence_upper.count(site_R) != 1:
+                raise Plasmid_Exception('There is more than one reverse %s site in %s!' % (restriction_enzyme, plasmid.plasmid_name or plasmid.get_id()))
+
+            left_overhang = part_type.overhang_5
+            right_overhang = part_type.overhang_3
+
+            # check if a part plasmid has multiple part plasmid parts - will select the correct 5' and 3' overhangs
+            if part_plasmids_query.filter( Plasmid.creator == plasmid.creator).filter(Plasmid.creator_entry_number == plasmid.creator_entry_number).count() > 1:
+                left_overhangs = set()
+                right_overhangs = set()
+
+                for p, pp, ppp, pt in part_plasmids_query.filter(and_(Plasmid.creator == plasmid.creator, Plasmid.creator_entry_number == plasmid.creator_entry_number)):
+                    left_overhangs.add(pt.overhang_5)
+                    right_overhangs.add(pt.overhang_3)
+
+                leftoverhangs = left_overhangs.symmetric_difference(right_overhangs) # Leftover overhangs? Get it?
+
+                for p, pp, ppp, pt in part_plasmids_query.filter(and_(Plasmid.creator == plasmid.creator, Plasmid.creator_entry_number == plasmid.creator_entry_number)):
+                    if pt.overhang_5 in leftoverhangs:
+                        left_overhang = pt.overhang_5
+                    if pt.overhang_3 in leftoverhangs:
+                        right_overhang = pt.overhang_3
+
+            site_F_position = sequence_upper.find(left_overhang, sequence_upper.find(site_F))
+            site_R_position = sequence_upper.find(right_overhang, sequence_upper.find(site_R) - 10) + 4
+
+            # Circular permutation so that forward cut site is always upstream of reverse cut site in linear sequence
+            if site_F_position > site_R_position:
+                sequence_upper = sequence_upper[site_R_position + 8:] + sequence_upper[:site_R_position + 8]
+
+            if table_info:
+                if (plasmid.creator, plasmid.creator_entry_number) not in already_fetched_cassettes:
+                    table_info['Part list'].append(sequence_upper[
+                                                   sequence_upper.find(left_overhang, sequence_upper.find(site_F)):
+                                                   sequence_upper.find(right_overhang,
+                                                                       sequence_upper.find(site_R) - 10) + 4
+                                                   ])
+                    table_info['Description'].append(plasmid.description)
+                    table_info['Part list ID'].append(
+                        (part_plasmid_part.part_number, plasmid.creator, plasmid.creator_entry_number))
+                    if part_plasmid_part.part_number == '1' or part_plasmid_part.part_number == '5':
+                        table_info['Connectors'][part_plasmid_part.part_number] = [plasmid.creator,
+                                                                                   plasmid.creator_entry_number]
+                    already_fetched_cassettes.append((plasmid.creator, plasmid.creator_entry_number))
+
+            part_sequences.append(sequence_upper[sequence_upper.find(left_overhang, sequence_upper.find(site_F)):sequence_upper.find(right_overhang,sequence_upper.find(site_R) - 10) + 4])
+
+        if table_info:
+            return table_info
+        else:
+            return part_sequences
+
 
 
     @staticmethod
