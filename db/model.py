@@ -226,13 +226,16 @@ class Plasmid(DeclarativeBasePlasmid):
             print(cassette_parts)
             for cassette_assembly, cassette_part_plasmid in cassette_parts:
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
-                print('***')
-                print(row_to_dict(cassette_assembly))
-                part_sequence = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
+                part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
                 if len(part_sequence) == 1:
                     part_sequence = part_sequence[0][4:-4]
                     for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
-                        part_indices_list.append([cassette_part_plasmid.description, cassette_assembly.Part_number, (instance.start(), instance.end())])
+                        part_indices_list.append(dict(
+                            name = cassette_part_plasmid.description,
+                            part_number = ', '.join(part_types),
+                            start = instance.start(),
+                            end = instance.end(),
+                        ))
 
         d['part_indices'] = part_indices_list
 
@@ -304,11 +307,14 @@ class Plasmid(DeclarativeBasePlasmid):
 
         already_fetched_cassettes = []
         part_sequences = []
+        part_types = []
 
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
             print "%s\t%s\t%s\t%s" % (
             plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
+
+            part_types.append(part_type.part_number)
 
             sequence_upper = plasmid.sequence.upper()
 
@@ -366,7 +372,7 @@ class Plasmid(DeclarativeBasePlasmid):
         if table_info:
             return table_info
         else:
-            return part_sequences
+            return part_sequences, part_types # todo: this is different from James's function
 
 
 
