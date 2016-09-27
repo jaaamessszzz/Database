@@ -859,3 +859,116 @@ class CDS_Mutant_Constituent(DeclarativeBasePlasmid):
             return db_record_object
         except:
             raise
+
+
+class Publication(DeclarativeBasePlasmid):
+    __tablename__ = 'Publication'
+
+    ID = Column(Integer, nullable = False, primary_key = True)
+    Title = Column(Unicode(256), nullable = True)
+    Publication = Column(String(256), nullable = True)
+    Volume = Column(String(8), nullable = True)
+    Issue = Column(String(8), nullable = True)
+    StartPage = Column(String(16), nullable = True)
+    EndPage = Column(String(16), nullable = True)
+    PublicationYear = Column(Integer, nullable = True)
+    PublicationDate = Column(DateTime, nullable = True)
+    DOI = Column(String(64), nullable=True)
+    URL = Column(String(128), nullable=True)
+    ISSN = Column(Integer, nullable=True)
+    PubMedID = Column(String(64), nullable=True)
+    RecordType = Column(String(128), nullable=True)
+    Notes = Column(Text, nullable=True)
+    RIS = Column(Text, nullable=True)
+
+    authors = relationship('PublicationAuthor', primaryjoin='PublicationAuthor.PublicationID == Publication.ID', order_by=lambda: PublicationAuthor.AuthorOrder)
+
+
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d['authors'] = [dict(
+                FirstName = a['FirstName'],
+                MiddleNames = a['MiddleNames'],
+                Surname = a['Surname'],
+            ) for a in self.authors]
+        return d
+
+
+    @staticmethod
+    def add(tsession, publication_record, creator, creator_entry_number, description, silent=True):
+
+        try:
+            # Add the Publication record
+            d = {}
+            expected_fields = {}
+            optional_fields = {
+                'Title' : 'Title',
+                'PublicationName' : 'Publication',
+                'Volume' : 'Volume',
+                'Issue' : 'Issue',
+                'StartPage': 'StartPage',
+                'EndPage'  : 'EndPage',
+                'PublicationYear' : 'PublicationYear',
+                'PublicationDate' : 'PublicationDate',
+                'DOI': 'DOI',
+                'URL': 'URL',
+                'ISSN': 'ISSN',
+                'PubMedID': 'PubMedID',
+                'RecordType': 'RecordType',
+                'Notes': 'Notes',
+                'RIS': 'RIS',
+            }
+            for k in expected_fields:
+                assert(k in publication_record and publication_record[k] != None)
+                d[expected_fields[k]] = publication_record[k]
+            for k in optional_fields:
+                d[optional_fields[k]] = publication_record.get(k)
+            new_publication = Publication(**d)
+            pprint.pprint(d)
+            tsession.add(new_publication)
+            tsession.flush()
+
+            # Add the PublicationAuthor records
+            authors = publication_record.get('authors', [])
+            assert(len(authors) > 0)
+            for a in authors:
+                a['PublicationID'] = new_publication.ID
+                new_publication_author = PublicationAuthor(**a)
+                tsession.add(new_publication_author)
+                tsession.flush()
+
+            # Add the Publication_Plasmid record
+            new_plasmid_publication = Publication_Plasmid(**dict(
+                PublicationID = new_publication.ID,
+                creator = creator,
+                creator_entry_number = creator_entry_number,
+                Description = description,
+            ))
+            tsession.add(new_plasmid_publication)
+            tsession.flush()
+
+            return new_publication
+
+        except:
+            raise
+
+
+class PublicationAuthor(DeclarativeBasePlasmid):
+    __tablename__ = 'PublicationAuthor'
+
+    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False, primary_key = True)
+    AuthorOrder = Column(Integer, nullable = False, primary_key = True)
+    FirstName = Column(Unicode(64), nullable = False)
+    MiddleNames = Column(Unicode(64), nullable = True)
+    Surname = Column(Unicode(64), nullable = True)
+
+
+class Publication_Plasmid(DeclarativeBasePlasmid):
+    __tablename__ = 'Publication_Plasmid'
+
+    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False, primary_key = True)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    Description = Column(Text, nullable = True)
+
