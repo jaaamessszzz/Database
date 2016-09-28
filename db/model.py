@@ -221,7 +221,13 @@ class Plasmid(DeclarativeBasePlasmid):
         d['publications'] = []
         if not only_basic_details:
             for pub in self.publications:
-                d['publications'].append(pub.get_details())
+                description = tsession.query(Publication_Plasmid).filter(and_(
+                        Publication_Plasmid.creator == self.creator,
+                        Publication_Plasmid.creator_entry_number == self.creator_entry_number,
+                        Publication_Plasmid.PublicationID == pub.ID)).one().Description
+                pubd = pub.get_details()
+                pubd['description'] = description
+                d['publications'].append(pubd)
 
         # Retrieve the list of associated features
         d['features'] = []
