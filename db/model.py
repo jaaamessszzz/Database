@@ -156,6 +156,16 @@ class Users(DeclarativeBasePlasmid):
     lab_username = Column(Unicode(50, collation="utf8_bin"), nullable = False)
     color = Column(Unicode(6, collation="utf8_bin"), nullable = False)
 
+
+class Publication_Plasmid(DeclarativeBasePlasmid):
+    __tablename__ = 'Publication_Plasmid'
+
+    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False, primary_key = True)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    Description = Column(Text, nullable = True)
+
+
 # TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
@@ -174,6 +184,11 @@ class Plasmid(DeclarativeBasePlasmid):
     status = Column(Enum('designed', 'verified', 'abandoned'), nullable=False)
     date = Column(TIMESTAMP, nullable=False)
 
+    publications = relationship("Publication",
+                                secondary = Publication_Plasmid.__table__,
+                                primaryjoin = "and_(Plasmid.creator == Publication_Plasmid.creator, Plasmid.creator_entry_number == Publication_Plasmid.creator_entry_number)",
+                                secondaryjoin = "Publication_Plasmid.PublicationID == Publication.ID",
+                                viewonly = True)
 
     def get_id(self):
         '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
@@ -201,6 +216,12 @@ class Plasmid(DeclarativeBasePlasmid):
             if plasmid_files.count() > 0:
                 for pf in plasmid_files:
                     d['files'].append(pf.get_details(tsession))
+
+        # Retrieve the list of associated publications
+        d['publications'] = []
+        if not only_basic_details:
+            for pub in self.publications:
+                d['publications'].append(pub.get_details())
 
         # Retrieve the list of associated features
         d['features'] = []
@@ -885,13 +906,13 @@ class Publication(DeclarativeBasePlasmid):
     authors = relationship('PublicationAuthor', primaryjoin='PublicationAuthor.PublicationID == Publication.ID', order_by=lambda: PublicationAuthor.AuthorOrder)
 
 
-    def to_dict(self):
+    def get_details(self):
         '''This function is used by the web interface.'''
         d = row_to_dict(self)
         d['authors'] = [dict(
-                FirstName = a['FirstName'],
-                MiddleNames = a['MiddleNames'],
-                Surname = a['Surname'],
+                FirstName = a.FirstName,
+                MiddleNames = a.MiddleNames,
+                Surname = a.Surname,
             ) for a in self.authors]
         return d
 
@@ -964,13 +985,4 @@ class PublicationAuthor(DeclarativeBasePlasmid):
     FirstName = Column(Unicode(64), nullable = False)
     MiddleNames = Column(Unicode(64), nullable = True)
     Surname = Column(Unicode(64), nullable = True)
-
-
-class Publication_Plasmid(DeclarativeBasePlasmid):
-    __tablename__ = 'Publication_Plasmid'
-
-    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False, primary_key = True)
-    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
-    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
-    Description = Column(Text, nullable = True)
 
