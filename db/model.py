@@ -880,6 +880,7 @@ class Publication(DeclarativeBasePlasmid):
     RecordType = Column(String(128), nullable=True)
     Notes = Column(Text, nullable=True)
     RIS = Column(Text, nullable=True)
+    Deprecated = Column(TINYINT(1), default = 0, nullable = False)
 
     authors = relationship('PublicationAuthor', primaryjoin='PublicationAuthor.PublicationID == Publication.ID', order_by=lambda: PublicationAuthor.AuthorOrder)
 
@@ -924,6 +925,7 @@ class Publication(DeclarativeBasePlasmid):
                 d[expected_fields[k]] = publication_record[k]
             for k in optional_fields:
                 d[optional_fields[k]] = publication_record.get(k)
+            d['Deprecated'] = 0
             new_publication = Publication(**d)
             pprint.pprint(d)
             tsession.add(new_publication)
