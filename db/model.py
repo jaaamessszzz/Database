@@ -21,6 +21,11 @@ from klab.bio.basics import translate_codons
 
 # todo: this should be moved into the klab repository e.g. klab/bio/dna.py
 class NotDNAException(Exception): pass
+
+
+
+class DuplicatePublicationException(Exception): pass
+
 def reverse_complement(input_sequence):
     base_pair = {
         'A': 'T',
@@ -160,10 +165,12 @@ class Users(DeclarativeBasePlasmid):
 class Publication_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Publication_Plasmid'
 
-    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False, primary_key = True)
-    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
-    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    ID = Column(Integer, nullable = False, primary_key = True, autoincrement = True)
+    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False)
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False)
     Description = Column(Text, nullable = True)
+    Deprecated = Column(TINYINT(1), default = 0, nullable = False)
 
 
 # TEMP for testing Find_Primers.py
@@ -186,7 +193,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
     publications = relationship("Publication",
                                 secondary = Publication_Plasmid.__table__,
-                                primaryjoin = "and_(Plasmid.creator == Publication_Plasmid.creator, Plasmid.creator_entry_number == Publication_Plasmid.creator_entry_number)",
+                                primaryjoin = "and_(Plasmid.creator == Publication_Plasmid.creator, Plasmid.creator_entry_number == Publication_Plasmid.creator_entry_number, Publication_Plasmid.Deprecated == 0)",
                                 secondaryjoin = "Publication_Plasmid.PublicationID == Publication.ID",
                                 viewonly = True)
 
@@ -221,13 +228,17 @@ class Plasmid(DeclarativeBasePlasmid):
         d['publications'] = []
         if not only_basic_details:
             for pub in self.publications:
-                description = tsession.query(Publication_Plasmid).filter(and_(
+                intersection_record = tsession.query(Publication_Plasmid).filter(and_(
                         Publication_Plasmid.creator == self.creator,
                         Publication_Plasmid.creator_entry_number == self.creator_entry_number,
-                        Publication_Plasmid.PublicationID == pub.ID)).one().Description
-                pubd = pub.get_details()
-                pubd['description'] = description
-                d['publications'].append(pubd)
+                        Publication_Plasmid.PublicationID == pub.ID,
+                        Publication_Plasmid.Deprecated == 0))
+                if intersection_record:
+                    intersection_record = intersection_record.one()
+                    description = intersection_record.Description
+                    pubd = pub.get_details()
+                    pubd['description'] = description
+                    d['publications'].append(pubd)
 
         # Retrieve the list of associated features
         d['features'] = []
@@ -907,7 +918,6 @@ class Publication(DeclarativeBasePlasmid):
     RecordType = Column(String(128), nullable=True)
     Notes = Column(Text, nullable=True)
     RIS = Column(Text, nullable=True)
-    Deprecated = Column(TINYINT(1), default = 0, nullable = False)
 
     authors = relationship('PublicationAuthor', primaryjoin='PublicationAuthor.PublicationID == Publication.ID', order_by=lambda: PublicationAuthor.AuthorOrder)
 
@@ -924,7 +934,7 @@ class Publication(DeclarativeBasePlasmid):
 
 
     @staticmethod
-    def add(tsession, publication_record, creator, creator_entry_number, description, silent=True):
+    def add(tsession, publication_record, creator, creator_entry_number, description, silent=True, allow_existing_publication_record=False):
 
         try:
             # Add the Publication record
@@ -952,27 +962,50 @@ class Publication(DeclarativeBasePlasmid):
                 d[expected_fields[k]] = publication_record[k]
             for k in optional_fields:
                 d[optional_fields[k]] = publication_record.get(k)
-            d['Deprecated'] = 0
             new_publication = Publication(**d)
-            pprint.pprint(d)
-            tsession.add(new_publication)
-            tsession.flush()
 
-            # Add the PublicationAuthor records
-            authors = publication_record.get('authors', [])
-            assert(len(authors) > 0)
-            for a in authors:
-                a['PublicationID'] = new_publication.ID
-                new_publication_author = PublicationAuthor(**a)
-                tsession.add(new_publication_author)
+            existing_hits = []
+            if new_publication.DOI != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.DOI == new_publication.DOI)])
+            if new_publication.URL != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.URL == new_publication.URL)])
+            if new_publication.ISSN != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.ISSN == new_publication.ISSN)])
+            if new_publication.PubMedID != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.PubMedID == new_publication.PubMedID)])
+            print(existing_hits)
+            if existing_hits:
+                if not allow_existing_publication_record:
+                    raise DuplicatePublicationException()
+                else:
+                    new_publication = existing_hits[0]
+            else:
+                tsession.add(new_publication)
                 tsession.flush()
 
+                # Add the PublicationAuthor records
+                authors = publication_record.get('authors', [])
+                assert(len(authors) > 0)
+                for a in authors:
+                    a['PublicationID'] = new_publication.ID
+                    new_publication_author = PublicationAuthor(**a)
+                    tsession.add(new_publication_author)
+                    tsession.flush()
+
             # Add the Publication_Plasmid record
+            for r in tsession.query(Publication_Plasmid).filter(and_(
+                    Publication_Plasmid.PublicationID == new_publication.ID,
+                    Publication_Plasmid.creator == creator,
+                    Publication_Plasmid.creator_entry_number == creator_entry_number,
+                )):
+                r.Deprecated = 1
+
             new_plasmid_publication = Publication_Plasmid(**dict(
                 PublicationID = new_publication.ID,
                 creator = creator,
                 creator_entry_number = creator_entry_number,
                 Description = description,
+                Deprecated = 0,
             ))
             tsession.add(new_plasmid_publication)
             tsession.flush()
