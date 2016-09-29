@@ -21,6 +21,11 @@ from klab.bio.basics import translate_codons
 
 # todo: this should be moved into the klab repository e.g. klab/bio/dna.py
 class NotDNAException(Exception): pass
+
+
+
+class DuplicatePublicationException(Exception): pass
+
 def reverse_complement(input_sequence):
     base_pair = {
         'A': 'T',
@@ -156,6 +161,18 @@ class Users(DeclarativeBasePlasmid):
     lab_username = Column(Unicode(50, collation="utf8_bin"), nullable = False)
     color = Column(Unicode(6, collation="utf8_bin"), nullable = False)
 
+
+class Publication_Plasmid(DeclarativeBasePlasmid):
+    __tablename__ = 'Publication_Plasmid'
+
+    ID = Column(Integer, nullable = False, primary_key = True, autoincrement = True)
+    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False)
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False)
+    Description = Column(Text, nullable = True)
+    Deprecated = Column(TINYINT(1), default = 0, nullable = False)
+
+
 # TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
@@ -174,13 +191,18 @@ class Plasmid(DeclarativeBasePlasmid):
     status = Column(Enum('designed', 'verified', 'abandoned'), nullable=False)
     date = Column(TIMESTAMP, nullable=False)
 
+    publications = relationship("Publication",
+                                secondary = Publication_Plasmid.__table__,
+                                primaryjoin = "and_(Plasmid.creator == Publication_Plasmid.creator, Plasmid.creator_entry_number == Publication_Plasmid.creator_entry_number, Publication_Plasmid.Deprecated == 0)",
+                                secondaryjoin = "Publication_Plasmid.PublicationID == Publication.ID",
+                                viewonly = True)
 
     def get_id(self):
         '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
         return u'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
-    def get_details(self, tsession):
+    def get_details(self, tsession, only_basic_details = False):
         '''.'''
         d = row_to_dict(self)
 
@@ -196,22 +218,40 @@ class Plasmid(DeclarativeBasePlasmid):
 
         # Retrieve the list of associated files
         d['files'] = []
-        plasmid_files = tsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == self.creator, Plasmid_File.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_File.file_name)
-        if plasmid_files.count() > 0:
-            for pf in plasmid_files:
-                d['files'].append(pf.get_details(tsession))
+        if not only_basic_details:
+            plasmid_files = tsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == self.creator, Plasmid_File.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_File.file_name)
+            if plasmid_files.count() > 0:
+                for pf in plasmid_files:
+                    d['files'].append(pf.get_details(tsession))
+
+        # Retrieve the list of associated publications
+        d['publications'] = []
+        if not only_basic_details:
+            for pub in self.publications:
+                intersection_record = tsession.query(Publication_Plasmid).filter(and_(
+                        Publication_Plasmid.creator == self.creator,
+                        Publication_Plasmid.creator_entry_number == self.creator_entry_number,
+                        Publication_Plasmid.PublicationID == pub.ID,
+                        Publication_Plasmid.Deprecated == 0))
+                if intersection_record:
+                    intersection_record = intersection_record.one()
+                    description = intersection_record.Description
+                    pubd = pub.get_details()
+                    pubd['description'] = description
+                    d['publications'].append(pubd)
 
         # Retrieve the list of associated features
         d['features'] = []
-        plasmid_features = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == self.creator, Plasmid_Feature.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_Feature.feature_name)
-        if plasmid_features.count() > 0:
-            for pf in plasmid_features:
-                d['features'].append(pf.get_details(tsession))
+        if not only_basic_details:
+            plasmid_features = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == self.creator, Plasmid_Feature.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_Feature.feature_name)
+            if plasmid_features.count() > 0:
+                for pf in plasmid_features:
+                    d['features'].append(pf.get_details(tsession))
 
 
         # todo: add all relevant information to part index list (only name and indicies so far)
         part_indices_list = None
-        if self.plasmid_type.lower() == 'cassette':
+        if self.plasmid_type.lower() == 'cassette' and not only_basic_details:
 
             part_indices_list = []
             # List of [part_name, (starting_index, ending_index)]
@@ -226,13 +266,16 @@ class Plasmid(DeclarativeBasePlasmid):
             print(cassette_parts)
             for cassette_assembly, cassette_part_plasmid in cassette_parts:
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
-                print('***')
-                print(row_to_dict(cassette_assembly))
-                part_sequence = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
+                part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
                 if len(part_sequence) == 1:
                     part_sequence = part_sequence[0][4:-4]
                     for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
-                        part_indices_list.append([cassette_part_plasmid.description, cassette_assembly.Part_number, (instance.start(), instance.end())])
+                        part_indices_list.append(dict(
+                            name = cassette_part_plasmid.description,
+                            part_number = ', '.join(part_types),
+                            start = instance.start(),
+                            end = instance.end(),
+                        ))
 
         d['part_indices'] = part_indices_list
 
@@ -262,21 +305,22 @@ class Plasmid(DeclarativeBasePlasmid):
         elif self.plasmid_type == 'cassette':
             assert ('part_plasmids' not in d)
             d['part_plasmids'] = []
-            try:
-                parts_read = {}
-                part_plasmids = tsession.query(Cassette_Assembly).filter(and_(Cassette_Assembly.Cassette_creator == self.creator, Cassette_Assembly.Cassette_creator_entry_number == self.creator_entry_number)).order_by(Cassette_Assembly.Part_number)
-                for pp in part_plasmids:
-                    pp_id = (pp.Part_creator, pp.Part_creator_entry_number)
-                    if pp_id not in parts_read:
-                        parts_read[pp_id] = True
-                        assert(pp.Part_number not in d['part_plasmids'])
-                        part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
-                        assert(part_plasmid_record.plasmid_type == 'part')
-                        d['part_plasmids'].append(part_plasmid_record.get_details(tsession))
-            except Exception, e:
-                colortext.warning(str(e))
-                colortext.warning(traceback.format_exc())
-                d['errors'].append('An error occurred retrieving data for this cassette assembly.')
+            if not only_basic_details:
+                try:
+                    parts_read = {}
+                    part_plasmids = tsession.query(Cassette_Assembly).filter(and_(Cassette_Assembly.Cassette_creator == self.creator, Cassette_Assembly.Cassette_creator_entry_number == self.creator_entry_number)).order_by(Cassette_Assembly.Part_number)
+                    for pp in part_plasmids:
+                        pp_id = (pp.Part_creator, pp.Part_creator_entry_number)
+                        if pp_id not in parts_read:
+                            parts_read[pp_id] = True
+                            assert(pp.Part_number not in d['part_plasmids'])
+                            part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
+                            assert(part_plasmid_record.plasmid_type == 'part')
+                            d['part_plasmids'].append(part_plasmid_record.get_details(tsession))
+                except Exception, e:
+                    colortext.warning(str(e))
+                    colortext.warning(traceback.format_exc())
+                    d['errors'].append('An error occurred retrieving data for this cassette assembly.')
 
         d['details'] = d['details'] or {}
 
@@ -304,11 +348,14 @@ class Plasmid(DeclarativeBasePlasmid):
 
         already_fetched_cassettes = []
         part_sequences = []
+        part_types = []
 
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
             print "%s\t%s\t%s\t%s" % (
             plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
+
+            part_types.append(part_type.part_number)
 
             sequence_upper = plasmid.sequence.upper()
 
@@ -366,7 +413,7 @@ class Plasmid(DeclarativeBasePlasmid):
         if table_info:
             return table_info
         else:
-            return part_sequences
+            return part_sequences, part_types # todo: this is different from James's function
 
 
 
@@ -850,3 +897,131 @@ class CDS_Mutant_Constituent(DeclarativeBasePlasmid):
             return db_record_object
         except:
             raise
+
+
+class Publication(DeclarativeBasePlasmid):
+    __tablename__ = 'Publication'
+
+    ID = Column(Integer, nullable = False, primary_key = True)
+    Title = Column(Unicode(256), nullable = True)
+    Publication = Column(String(256), nullable = True)
+    Volume = Column(String(8), nullable = True)
+    Issue = Column(String(8), nullable = True)
+    StartPage = Column(String(16), nullable = True)
+    EndPage = Column(String(16), nullable = True)
+    PublicationYear = Column(Integer, nullable = True)
+    PublicationDate = Column(DateTime, nullable = True)
+    DOI = Column(String(64), nullable=True)
+    URL = Column(String(128), nullable=True)
+    ISSN = Column(Integer, nullable=True)
+    PubMedID = Column(String(64), nullable=True)
+    RecordType = Column(String(128), nullable=True)
+    Notes = Column(Text, nullable=True)
+    RIS = Column(Text, nullable=True)
+
+    authors = relationship('PublicationAuthor', primaryjoin='PublicationAuthor.PublicationID == Publication.ID', order_by=lambda: PublicationAuthor.AuthorOrder)
+
+
+    def get_details(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d['authors'] = [dict(
+                FirstName = a.FirstName,
+                MiddleNames = a.MiddleNames,
+                Surname = a.Surname,
+            ) for a in self.authors]
+        return d
+
+
+    @staticmethod
+    def add(tsession, publication_record, creator, creator_entry_number, description, silent=True, allow_existing_publication_record=False):
+
+        try:
+            # Add the Publication record
+            d = {}
+            expected_fields = {}
+            optional_fields = {
+                'Title' : 'Title',
+                'PublicationName' : 'Publication',
+                'Volume' : 'Volume',
+                'Issue' : 'Issue',
+                'StartPage': 'StartPage',
+                'EndPage'  : 'EndPage',
+                'PublicationYear' : 'PublicationYear',
+                'PublicationDate' : 'PublicationDate',
+                'DOI': 'DOI',
+                'URL': 'URL',
+                'ISSN': 'ISSN',
+                'PubMedID': 'PubMedID',
+                'RecordType': 'RecordType',
+                'Notes': 'Notes',
+                'RIS': 'RIS',
+            }
+            for k in expected_fields:
+                assert(k in publication_record and publication_record[k] != None)
+                d[expected_fields[k]] = publication_record[k]
+            for k in optional_fields:
+                d[optional_fields[k]] = publication_record.get(k)
+            new_publication = Publication(**d)
+
+            existing_hits = []
+            if new_publication.DOI != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.DOI == new_publication.DOI)])
+            if new_publication.URL != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.URL == new_publication.URL)])
+            if new_publication.ISSN != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.ISSN == new_publication.ISSN)])
+            if new_publication.PubMedID != None:
+                existing_hits.extend([r for r in tsession.query(Publication).filter(Publication.PubMedID == new_publication.PubMedID)])
+            print(existing_hits)
+            if existing_hits:
+                if not allow_existing_publication_record:
+                    raise DuplicatePublicationException()
+                else:
+                    new_publication = existing_hits[0]
+            else:
+                tsession.add(new_publication)
+                tsession.flush()
+
+                # Add the PublicationAuthor records
+                authors = publication_record.get('authors', [])
+                assert(len(authors) > 0)
+                for a in authors:
+                    a['PublicationID'] = new_publication.ID
+                    new_publication_author = PublicationAuthor(**a)
+                    tsession.add(new_publication_author)
+                    tsession.flush()
+
+            # Add the Publication_Plasmid record
+            for r in tsession.query(Publication_Plasmid).filter(and_(
+                    Publication_Plasmid.PublicationID == new_publication.ID,
+                    Publication_Plasmid.creator == creator,
+                    Publication_Plasmid.creator_entry_number == creator_entry_number,
+                )):
+                r.Deprecated = 1
+
+            new_plasmid_publication = Publication_Plasmid(**dict(
+                PublicationID = new_publication.ID,
+                creator = creator,
+                creator_entry_number = creator_entry_number,
+                Description = description,
+                Deprecated = 0,
+            ))
+            tsession.add(new_plasmid_publication)
+            tsession.flush()
+
+            return new_publication
+
+        except:
+            raise
+
+
+class PublicationAuthor(DeclarativeBasePlasmid):
+    __tablename__ = 'PublicationAuthor'
+
+    PublicationID = Column(Integer, ForeignKey('Publication.ID'), nullable = False, primary_key = True)
+    AuthorOrder = Column(Integer, nullable = False, primary_key = True)
+    FirstName = Column(Unicode(64), nullable = False)
+    MiddleNames = Column(Unicode(64), nullable = True)
+    Surname = Column(Unicode(64), nullable = True)
+
