@@ -1,7 +1,8 @@
 from Utilities.Plasmid_Utilities import Plasmid_Utilities
 from Utilities.Plasmid_View_Tools import Plasmid_View_Tools
 from db.interface import DatabaseInterface
-from db.model import Feature, Plasmid_File, Plasmid
+from db.model import Feature, Plasmid_File, Plasmid, Part_Plasmid_Part
+from sqlalchemy import and_
 
 import sys
 import pprint
@@ -138,7 +139,7 @@ def generate_cassette_plasmids(asdf):
 def generate_multicassette_plasmids(asdf):
 
     assembly_type = 'multicassette'
-    input_sequences = [('JL', 21), ('JL', 22), ('JL', 19)]
+    input_sequences = [('JL', 28), ('JL', 30), ('JL', 44)]
 
     table_info = asdf.golden_gate_assembly(input_sequences, assembly_type)
 
@@ -156,7 +157,7 @@ def generate_multicassette_plasmids(asdf):
     import pprint
     pprint.pprint(input_dict['sequence'])
 
-    asdf.add_multicassette_plasmid_to_db(input_dict, table_info, auto_commit=False)
+    asdf.add_multicassette_plasmid_to_db(input_dict, table_info, auto_commit=True)
 
 def main():
 
@@ -172,6 +173,11 @@ def main():
     # generate_part_plasmids(asdf)
     # generate_cassette_plasmids(asdf)
     generate_multicassette_plasmids(asdf)
+    # asdf.update_features()
+
+    # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 17))
+    # print feature_indicies_list
+    # print part_indicies_list
 
     ### Generate Primers for a given sequence and TM
     # target_primer_F, target_primer_R = qwer.generate_primers('ggcgtcatgactgatgtccaccggcgcttcctccagttgctgatgacgcatggcgtgctagaggaatgggacgtgaagcgcttgcagacgcactgctacaaggtccatgaccgcaatgccaccgtagataagttggaggacttcatcaacaacattaacagtgtcttggagtccttgtatattgagataaagagaggagtcacggaagatgatggcagacccatttatgcgttggtgaatcttgctacaacttcaatttccaaaatggctacggattttgcagagaatgaactggatttgtttagaaaggctctggaactgattattgactcagaaaccggctttgcgtcttccacaaacatattgaacctggttgatcaacttaaaggcaagaagatgaggaagaaggaagcggagcaggtgctgcagaagtttgttcaaaacaagtggctgattgagaaggaaggggagttcaccctgcacggccgggccatcctggagatggagcaatacatccgggaaacgtaccccgacgcggtgaagatctgcaatatctgtcacagcctcctcatccagggtcaaagctgcgaaacctgtgggatcaggatgcacttaccctgcgtggccaagtacttccagtcgaatgctgaaccgcgctgcccccactgcaacgactactggccccacgagatcccaaaagtcttcgaccctgag',
@@ -191,6 +197,23 @@ def main():
     # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
     # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False )
 
+    # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
+    # for plasmid, part_plasmid_part in my_plasmids:
+    #     input_dict = {'creator': plasmid.creator,
+    #                   'plasmid_name': plasmid.plasmid_name,
+    #                   'plasmid_type': plasmid.plasmid_type,
+    #                   'location': plasmid.location,
+    #                   'description': plasmid.description,
+    #                   'sequence': plasmid.sequence,
+    #                   'status': plasmid.status
+    #                   }
+    #     try:
+    #         if plasmid.plasmid_type == 'part':
+    #             asdf.plasmid_checks(input_dict, plasmid.plasmid_type, part_plasmid_part.part_number)
+    #         else:
+    #             asdf.plasmid_checks(input_dict, plasmid.plasmid_type)
+    #     except:
+    #         print '{0}{1}'.format(plasmid.creator, plasmid.creator_entry_number)
     tsession.close()
 
 if __name__ == '__main__':
