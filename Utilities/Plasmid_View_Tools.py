@@ -133,6 +133,9 @@ class Plasmid_View_Tools(object):
         TM_R = 0
 
         target_upper = target_sequence.upper()
+        for char in target_upper:
+            if char.upper() not in 'ATCG':
+                raise Plasmid_Exception('Non-ATCG character in the target sequence!')
 
         # Generate Forward Primer
         while TM_F < Target_TM:
