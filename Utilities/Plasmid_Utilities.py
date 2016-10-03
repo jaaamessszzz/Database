@@ -524,6 +524,21 @@ class Plasmid_Utilities(object):
         return current_plasmid_entry
 
 
+    def add_other_plasmid_to_db(self, input_dict, input_files):
+        new_plasmid = Plasmid.add(self.tsession, input_dict)
+
+        # Add Plasmid File records
+        plasmid_id_fields = dict(
+            creator_entry_number=new_plasmid.creator_entry_number,
+            creator=new_plasmid.creator,
+        )
+        for pfile in input_files:
+            pfile.update(plasmid_id_fields)
+            pf = Plasmid_File.add(self.tsession, pfile)
+
+        self.add_features(new_plasmid)
+
+
     def add_features(self, current_plasmid_entry):
         features_query = self.tsession.query(Feature, Feature_Type).filter(
             Feature.Feature_type == Feature_Type.Feature_type)
@@ -862,5 +877,101 @@ class Plasmid_Utilities(object):
         self.tsession.commit()
         print 'Update Complete!'
 
+    def nuke_plasmids(self, nuke_list):
+        """
+        Deletes plasmid entries from the database
+        :param nuke_list: list of (creator, creator_entry_number) tuples of plasmids to be deleted
+        :return:
+        """
+        for target in nuke_list:
+            target_query = self.tsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).one()
+            print target_query.plasmid_type
 
+            if target_query.plasmid_type == 'part':
+                try:
+                    dsession = self.dbi.get_session()
+                    dsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == target[0], Part_Plasmid_Part.creator_entry_number == target[1])).delete()
+                    dsession.query(Part_Plasmid).filter(and_(Part_Plasmid.creator == target[0], Part_Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0], Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0], Plasmid_File.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.commit()
+                    dsession.close()
+                    print '***p{0}{1:04d} DELETED***'.format(target[0], target[1])
+                except Exception, e:
+                    import traceback
 
+                    print('Failure')
+                    print(str(e))
+                    print(traceback.format_exc())
+
+                    if dsession:
+                        dsession.rollback()
+                        dsession.close()
+
+            elif target_query.plasmid_type == 'cassette':
+                try:
+                    dsession = self.dbi.get_session()
+                    dsession.query(Cassette_Assembly).filter(and_(Cassette_Assembly.Cassette_creator == target[0],Cassette_Assembly.Cassette_creator_entry_number == target[1])).delete()
+                    dsession.query(Cassette_Plasmid).filter(and_(Cassette_Plasmid.creator == target[0],Cassette_Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0],Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0],Plasmid_File.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.commit()
+                    dsession.close()
+                    print '***p{0}{1:04d} DELETED***'.format(target[0], target[1])
+                except Exception, e:
+                    import traceback
+
+                    print('Failure')
+                    print(str(e))
+                    print(traceback.format_exc())
+
+                    if dsession:
+                        dsession.rollback()
+                        dsession.close()
+
+            elif target_query.plasmid_type == 'multicassette':
+                try:
+                    dsession = self.dbi.get_session()
+                    dsession.query(Multicassette_Assembly).filter(and_(Multicassette_Assembly.Multicassette_creator == target[0], Multicassette_Assembly.Multicassette_creator_entry_number == target[1])).delete()
+                    dsession.query(Multicassette_Plasmid).filter(and_(Multicassette_Plasmid.creator == target[0], Multicassette_Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0], Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0], Plasmid_File.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.commit()
+                    dsession.close()
+                    print '***p{0}{1:04d} DELETED***'.format(target[0], target[1])
+                except Exception, e:
+                    import traceback
+
+                    print('Failure')
+                    print(str(e))
+                    print(traceback.format_exc())
+
+                    if dsession:
+                        dsession.rollback()
+                        dsession.close()
+
+            elif target_query.plasmid_type == 'other':
+                try:
+                    dsession = self.dbi.get_session()
+                    dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0],Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0],Plasmid_File.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.commit()
+                    dsession.close()
+                    print '***p{0}{1:04d} DELETED***'.format(target[0], target[1])
+                except Exception, e:
+                    import traceback
+
+                    print('Failure')
+                    print(str(e))
+                    print(traceback.format_exc())
+
+                    if dsession:
+                        dsession.rollback()
+                        dsession.close()
+
+            else:
+                raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
