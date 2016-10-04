@@ -75,11 +75,11 @@ class Primers(DeclarativeBasePlasmid):
 
     creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key = True)
     creator_entry_number = Column(Integer, nullable=False, primary_key = True)
-    secondary_id = Column(Unicode(100, collation = "utf8_bin"), nullable = False)
+    secondary_id = Column(Unicode(100, collation = "utf8_bin"), nullable = True)
     sequence = Column(Unicode(256, collation="utf8_bin"), nullable = False)
     direction = Column(Enum('F','R'), nullable=False)
     description = Column(Text(collation="utf8_bin"), nullable=False)
-    TM = Column(Integer, nullable=False)
+    TM = Column(Float, nullable=False)
     date = Column(TIMESTAMP, nullable=False)
     GC = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
@@ -109,6 +109,7 @@ class Primers(DeclarativeBasePlasmid):
                 if type(v) == float and numpy.isnan(v):
                     d[k] = None
             db_record_object = Primers(**d)
+            assert(len(d['sequence'] < 256))
 
             if not silent:
                 colortext.pcyan('Adding this record:')
@@ -124,17 +125,62 @@ class Primers(DeclarativeBasePlasmid):
 
 
     @staticmethod
-    def add_primer_plasmid(tsession, d, silent = True):
-        # User-specified
-        #secondary_id = Column(Unicode(100, collation = "utf8_bin"), nullable = False)
-        #description = Column(Text(collation = "utf8_bin"), nullable = False)
-        #template_description = Column(Text(collation = "utf8_bin"), nullable = True)
-        # Automatically derived
-        #GC = Column(Float, nullable = True)
-        # Automatically derived
-        #template_id        e.g.pJL0003, also         add        PlasmidPrimer         record        JL, 3, this.creator, this.creator_entry_number
+    def calculate_gc(sequence):
+        gc = 0
+        for c in sequence.lower():
+            if c == 'g' or c == 'c':
+                gc += 1
+            else:
+                assert(c == 'a' or c == 't')
+        gc /= len(sequence)
 
-        pass
+
+    @staticmethod
+    def add_primer_plasmid(tsession, primer_d, associated_plasmid, silent = True):
+        # User-specified
+        try:
+
+            sequence = primer_d['sequence']
+
+            # Calculate GC content
+            gc = Primers.calculate_gc(sequence)
+            if 'GC' in primer_d:
+                assert(abs(primer_d['GC'] - gc) < 0.01)
+            primer_d['GC'] = gc
+
+            # Calculate length
+            primer_length = len(sequence)
+            if 'length' in primer_d:
+                assert (primer_d['length'] == primer_length)
+            primer_d['length'] = primer_length
+
+            # Derive template ID
+            primer_d['template_id'] = associated_plasmid.get_id()
+
+            pprint.pprint(primer_d)
+            raise Exception('test')
+
+            # Add Primer record
+            new_primer = Primers.add(tsession, primer_d, silent = silent)
+
+            # Add PlasmidPrimer record
+            db_record_object = PlasmidPrimer(**dict(
+                plasmid_creator = associated_plasmid.creator,
+                plasmid_creator_entry_number = associated_plasmid.creator_entry_number,
+                primer_creator = new_primer.creator,
+                primer_creator_entry_number = new_primer.creator_entry_number,
+            ))
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+            return db_record_object
+        except:
+            raise
 
 
     def __repr__(self):
@@ -462,6 +508,19 @@ class Plasmid(DeclarativeBasePlasmid):
     def __repr__(self):
         return 'Internal numbering: {0} {1}\n' \
             'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
+
+
+class PlasmidPrimer(DeclarativeBase):
+    __tablename__ = 'PlasmidPrimer'
+
+    plasmid_creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
+    plasmid_creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    primer_creator = Column(Unicode(5), ForeignKey('Primers.creator'), nullable = False, primary_key = True)
+    primer_creator_entry_number = Column(Integer, ForeignKey('Primers.creator_entry_number'), nullable = False, primary_key = True)
+
+    plasmid = relationship('Plasmid', primaryjoin = 'and_(Plasmid.creator == PlasmidPrimer.creator, Plasmid.creator_entry_number == PlasmidPrimer.creator_entry_number)')
+    primer = relationship('Primers', primaryjoin = 'and_(Primers.creator == PlasmidPrimer.creator, Primers.creator_entry_number == PlasmidPrimer.creator_entry_number)')
+
 
 ######
 
