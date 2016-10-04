@@ -17,6 +17,10 @@ except:
     from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent
     from kprimers.Utilities.Plasmid_Utilities import Plasmid_Utilities, Plasmid_Exception
 
+
+class PrimerGenerationException(Exception): pass
+
+
 class Plasmid_View_Tools(object):
     '''
     Tools for viewing and manipulating plasmids in Plasmid View!
@@ -102,6 +106,7 @@ class Plasmid_View_Tools(object):
 
         return feature_indicies_list, part_indicies_list
 
+
     def generate_primers(self, target_sequence, Target_TM, primer = 50, Na = 50, K = None, Mg = None, dNTPs = None, Tris = None, left_arm = None, right_arm = None):
         '''
         Function for generating primers with SequenceViewer + User inputs and depositing designed primers into the
@@ -138,6 +143,7 @@ class Plasmid_View_Tools(object):
                 raise Plasmid_Exception('Non-ATCG character in the target sequence!')
 
         # Generate Forward Primer
+        target_primer_F, TM_F_previous = None, None
         while TM_F < Target_TM:
             TM_F = mt.Tm_NN(Seq(target_upper[:primer_length_F]),
                             nn_table = mt.DNA_NN2,
@@ -151,13 +157,20 @@ class Plasmid_View_Tools(object):
                             dNTPs = dNTPs or 0,
                             saltcorr = 5
                             )
-
             if TM_F < Target_TM:
                 primer_length_F += 1
-                TM_F_previous = TM_F
                 target_primer_F = target_upper[:primer_length_F]
+            if TM_F_previous != None and TM_F_previous >= TM_F:
+                # Strong normalisation check - otherwise this will loop infinitely (possible with bad input)
+                target_primer_F = None
+                break
+            TM_F_previous = TM_F
+
+        if target_primer_F == None:
+            raise PrimerGenerationException()
 
         # Generate Reverse Primer
+        target_primer_R, TM_R_previous = None, None
         while TM_R < Target_TM:
             TM_R = mt.Tm_NN(Seq(self.plasmid_util.reverse_complement(target_upper[-primer_length_R:])),
                             nn_table=mt.DNA_NN2,
@@ -171,11 +184,17 @@ class Plasmid_View_Tools(object):
                             dNTPs=dNTPs or 0,
                             saltcorr=5
                             )
-
             if TM_R < Target_TM:
                 primer_length_R += 1
-                TM_R_previous = TM_R
                 target_primer_R = self.plasmid_util.reverse_complement(target_upper[-primer_length_R:])
+            if TM_R_previous != None and TM_R_previous >= TM_R:
+                # Strong normalisation check - otherwise this will loop infinitely (possible with bad input)
+                target_primer_R = None
+                break
+            TM_R_previous = TM_R
+
+        if target_primer_R == None:
+            raise PrimerGenerationException()
 
         if left_arm and right_arm:
             for char in left_arm:

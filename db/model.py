@@ -84,7 +84,7 @@ class Primers(DeclarativeBasePlasmid):
     GC = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
     template_id = Column(Unicode(200, collation="utf8_bin"), nullable = True)
-    template_description = Column(Unicode(200, collation="utf8_bin"), nullable = True)
+    template_description = Column(Text(collation="utf8_bin"), nullable = True)
 
 
     def get_id(self):
@@ -121,6 +121,20 @@ class Primers(DeclarativeBasePlasmid):
             return db_record_object
         except:
             raise
+
+
+    @staticmethod
+    def add_primer_plasmid(tsession, d, silent = True):
+        # User-specified
+        #secondary_id = Column(Unicode(100, collation = "utf8_bin"), nullable = False)
+        #description = Column(Text(collation = "utf8_bin"), nullable = False)
+        #template_description = Column(Text(collation = "utf8_bin"), nullable = True)
+        # Automatically derived
+        #GC = Column(Float, nullable = True)
+        # Automatically derived
+        #template_id        e.g.pJL0003, also         add        PlasmidPrimer         record        JL, 3, this.creator, this.creator_entry_number
+
+        pass
 
 
     def __repr__(self):
