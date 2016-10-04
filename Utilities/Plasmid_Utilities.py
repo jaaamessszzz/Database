@@ -13,11 +13,11 @@ sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
-    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
-    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid
 
 class Plasmid_Exception(Exception): pass
 
@@ -884,8 +884,24 @@ class Plasmid_Utilities(object):
         :return:
         """
         for target in nuke_list:
-            target_query = self.tsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).one()
-            print target_query.plasmid_type
+            try:
+                target_query = self.tsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).one()
+            except:
+                print "p{0}{1:04d} doesn't seem to exist. Moving on!".format(target[0], target[1])
+                continue
+
+            # Checking for special cases where a plasmid might be particularly important and we won't want to delete it
+            mutant_query = self.tsession.query(Plasmid_Feature, CDS_Mutant).filter(and_(Plasmid_Feature.creator == target[0],
+                                                                                             Plasmid_Feature.creator_entry_number == target[1],
+                                                                                             Plasmid_Feature.ID == CDS_Mutant.Plasmid_Feature_ID)).count()
+            publication_query = self.tsession.query(Publication_Plasmid).filter(and_(Publication_Plasmid.creator == target[0], Publication_Plasmid.creator_entry_number == target[1])).count()
+
+            if mutant_query != 0:
+                print "WARNING: A database record in CDS_Mutants references p{0}{1:04d}. This plasmid will not be deleted.".format(target[0], target[1])
+                continue
+            if publication_query != 0:
+                print "WARNING: A database record in Publication_Plasmid references p{0}{1:04d}. This plasmid will not be deleted.".format(target[0], target[1])
+                continue
 
             if target_query.plasmid_type == 'part':
                 try:
