@@ -233,6 +233,18 @@ class Publication_Plasmid(DeclarativeBasePlasmid):
     Deprecated = Column(TINYINT(1), default = 0, nullable = False)
 
 
+class PlasmidPrimer(DeclarativeBasePlasmid):
+    __tablename__ = 'PlasmidPrimer'
+
+    plasmid_creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
+    plasmid_creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    primer_creator = Column(Unicode(5), ForeignKey('Primers.creator'), nullable = False, primary_key = True)
+    primer_creator_entry_number = Column(Integer, ForeignKey('Primers.creator_entry_number'), nullable = False, primary_key = True)
+
+    plasmid = relationship('Plasmid', primaryjoin = 'and_(Plasmid.creator == PlasmidPrimer.plasmid_creator, Plasmid.creator_entry_number == PlasmidPrimer.plasmid_creator_entry_number)')
+    primer = relationship('Primers', primaryjoin = 'and_(Primers.creator == PlasmidPrimer.primer_creator, Primers.creator_entry_number == PlasmidPrimer.primer_creator_entry_number)')
+
+
 # TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
@@ -305,6 +317,12 @@ class Plasmid(DeclarativeBasePlasmid):
                     pubd = pub.get_details()
                     pubd['description'] = description
                     d['publications'].append(pubd)
+
+        # Retrieve the list of associated primers
+        d['primers'] = []
+        if not only_basic_details:
+            for prmr in self.primers:
+                d['primers'].append(row_to_dict(prmr))
 
         # Retrieve the list of associated features
         d['features'] = []
@@ -514,18 +532,6 @@ class Plasmid(DeclarativeBasePlasmid):
     def __repr__(self):
         return 'Internal numbering: {0} {1}\n' \
             'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
-
-
-class PlasmidPrimer(DeclarativeBase):
-    __tablename__ = 'PlasmidPrimer'
-
-    plasmid_creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
-    plasmid_creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
-    primer_creator = Column(Unicode(5), ForeignKey('Primers.creator'), nullable = False, primary_key = True)
-    primer_creator_entry_number = Column(Integer, ForeignKey('Primers.creator_entry_number'), nullable = False, primary_key = True)
-
-    plasmid = relationship('Plasmid', primaryjoin = 'and_(Plasmid.creator == PlasmidPrimer.creator, Plasmid.creator_entry_number == PlasmidPrimer.creator_entry_number)')
-    primer = relationship('Primers', primaryjoin = 'and_(Primers.creator == PlasmidPrimer.creator, Primers.creator_entry_number == PlasmidPrimer.creator_entry_number)')
 
 
 ######
