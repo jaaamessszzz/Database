@@ -257,6 +257,12 @@ class Plasmid(DeclarativeBasePlasmid):
                                 secondaryjoin = "Publication_Plasmid.PublicationID == Publication.ID",
                                 viewonly = True)
 
+    primers = relationship("Primers",
+                                secondary = PlasmidPrimer.__table__,
+                                primaryjoin = "and_(Plasmid.creator == PlasmidPrimer.plasmid_creator, Plasmid.creator_entry_number == PlasmidPrimer.plasmid_creator_entry_number)",
+                                secondaryjoin = "and_(PlasmidPrimer.primer_creator == Primers.creator, PlasmidPrimer.primer_creator_entry_number == Primers.creator_entry_number)",
+                                viewonly = True)
+
     def get_id(self):
         '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
         return u'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
