@@ -827,7 +827,7 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     def get_details(self, tsession):
         '''Returns details about a feature.'''
         feature_details = self.feature.get_details(tsession)
-        plasmid_sequence = self.plasmid.sequence
+        plasmid_sequence = self.plasmid.sequence.upper().strip()
         feature_sequence = self.feature.Feature_sequence.upper().strip()
         feature_type = self.feature.ftype
         indices = []
@@ -846,28 +846,28 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
                 ))
             else:
                 indices.append(dict(
-                        name = self.feature_name,
-                        start = instance.start(),
-                        end = instance.end(),
+                    name = self.feature_name,
+                    start = instance.start(),
+                    end = instance.end(),
                 ))
 
         for instance in re.finditer(reverse_complement(feature_sequence), plasmid_sequence):
             if self.feature.Feature_type == 'Restrxn Type II':
                 indices.append(dict(
-                        name = self.feature_name + ' R',
-                        start = instance.start(),
-                        end = instance.end(),
+                    name = self.feature_name + ' R',
+                    start = instance.start(),
+                    end = instance.end(),
                 ))
                 indices.append(dict(
-                        name = self.feature_name + ' Overhang',
-                        start = instance.start() - 5,
-                        end = instance.start() - 1,
+                    name = self.feature_name + ' Overhang',
+                    start = instance.start() - 5,
+                    end = instance.start() - 1,
                 ))
             else:
                 indices.append(dict(
-                        name = self.feature_name,
-                        start = instance.start(),
-                        end = instance.end(),
+                    name = self.feature_name,
+                    start = instance.start(),
+                    end = instance.end(),
                 ))
         feature_details['indices'] = indices
         return feature_details
