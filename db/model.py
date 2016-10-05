@@ -4,7 +4,7 @@ import traceback
 
 import numpy
 
-from sqlalchemy import Table, ForeignKey, Column
+from sqlalchemy import Table, ForeignKey, Column, UniqueConstraint, FetchedValue
 from sqlalchemy.dialects.mysql import DOUBLE, TINYINT, LONGBLOB
 from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Unicode, String
 from sqlalchemy.orm import relationship
@@ -86,16 +86,28 @@ class Primers(DeclarativeBasePlasmid):
     template_id = Column(Unicode(200, collation="utf8_bin"), nullable = True)
     template_description = Column(Text(collation="utf8_bin"), nullable = True)
 
+    UniqueConstraint('sequence', 'sequence', name = 'secondary_id_2')
+    UniqueConstraint('sequence', 'direction', name = 'secondary_id_3')
+
 
     def get_id(self):
         '''Return a canonically formatted string to identify the primer in stores e.g. "oJL0023".'''
         return 'o{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d['__id__'] = self.get_id() # this is easier to work with for the website hashtables
+        return d
+
+
     @staticmethod
     def add(tsession, d, silent = True):
 
         try:
+            sequence = d['sequence']
+
             for f in Primers._optional_fields:
                 if f not in d:
                     d[f] = None
@@ -108,8 +120,22 @@ class Primers(DeclarativeBasePlasmid):
             for k, v in d.iteritems():
                 if type(v) == float and numpy.isnan(v):
                     d[k] = None
+
+            assert(len(sequence) < 256)
+
+            # Calculate GC content
+            gc = Primers.calculate_gc(sequence)
+            if 'GC' in d and d['GC'] != None:
+                assert(abs(d['GC'] - gc) < 0.01)
+            d['GC'] = gc
+
+            # Calculate length
+            primer_length = len(sequence)
+            if 'length' in d and d['length'] != None:
+                assert(d['length'] == primer_length)
+            d['length'] = primer_length
+
             db_record_object = Primers(**d)
-            assert(len(d['sequence'] < 256))
 
             if not silent:
                 colortext.pcyan('Adding this record:')
@@ -118,6 +144,14 @@ class Primers(DeclarativeBasePlasmid):
 
             tsession.add(db_record_object)
             tsession.flush()
+
+            # Note: Because we use a MySQL trigger, SQLAlchemy does not know to update creator_entry_number so db_record_object.creator_entry_number will return zero
+            #       I looked into this for an hour and tried using FetchedValue but gave up on it. Other solutions: i) use PostgreSQL; ii) define the trigger using DDL in SQLAlchemy.
+
+            if not silent:
+                colortext.pcyan('Added this record:')
+                print(db_record_object)
+                print('')
 
             return db_record_object
         except:
@@ -132,43 +166,31 @@ class Primers(DeclarativeBasePlasmid):
                 gc += 1
             else:
                 assert(c == 'a' or c == 't')
-        gc /= len(sequence)
+        return float(gc) / float(len(sequence))
 
 
-    @staticmethod
-    def add_primer_plasmid(tsession, primer_d, associated_plasmid, silent = True):
-        # User-specified
+    def add_primer_plasmid(self, tsession, associated_plasmid, silent = True):
+        '''
+        Add a PlasmidPrimer record for this primer
+        This was meant to be a staticmethod which added both the Primers record and the PlasmidPrimer record.
+        However, I hit a snag. Because we use a MySQL trigger, SQLAlchemy does not know to update creator_entry_number
+        so db_record_object.creator_entry_number will return zero. There are potential fixes but I looked into this
+        for an hour and gave up on it.
+
+        Potential fixes: i) use PostgreSQL; ii) define the trigger using DDL in SQLAlchemy.
+
+        :param tsession:
+        :param associated_plasmid:
+        :param silent:
+        :return:
+        '''
         try:
-
-            sequence = primer_d['sequence']
-
-            # Calculate GC content
-            gc = Primers.calculate_gc(sequence)
-            if 'GC' in primer_d:
-                assert(abs(primer_d['GC'] - gc) < 0.01)
-            primer_d['GC'] = gc
-
-            # Calculate length
-            primer_length = len(sequence)
-            if 'length' in primer_d:
-                assert (primer_d['length'] == primer_length)
-            primer_d['length'] = primer_length
-
-            # Derive template ID
-            primer_d['template_id'] = associated_plasmid.get_id()
-
-            pprint.pprint(primer_d)
-            raise Exception('test')
-
-            # Add Primer record
-            new_primer = Primers.add(tsession, primer_d, silent = silent)
-
             # Add PlasmidPrimer record
             db_record_object = PlasmidPrimer(**dict(
                 plasmid_creator = associated_plasmid.creator,
                 plasmid_creator_entry_number = associated_plasmid.creator_entry_number,
-                primer_creator = new_primer.creator,
-                primer_creator_entry_number = new_primer.creator_entry_number,
+                primer_creator = self.creator,
+                primer_creator_entry_number = self.creator_entry_number,
             ))
 
             if not silent:
@@ -245,6 +267,10 @@ class PlasmidPrimer(DeclarativeBasePlasmid):
     primer = relationship('Primers', primaryjoin = 'and_(Primers.creator == PlasmidPrimer.primer_creator, Primers.creator_entry_number == PlasmidPrimer.primer_creator_entry_number)')
 
 
+    def __repr__(self):
+        return 'Plasmid: {0}, Primer: {1}'.format(self.plasmid, self.primer)
+
+
 # TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
@@ -274,6 +300,13 @@ class Plasmid(DeclarativeBasePlasmid):
                                 primaryjoin = "and_(Plasmid.creator == PlasmidPrimer.plasmid_creator, Plasmid.creator_entry_number == PlasmidPrimer.plasmid_creator_entry_number)",
                                 secondaryjoin = "and_(PlasmidPrimer.primer_creator == Primers.creator, PlasmidPrimer.primer_creator_entry_number == Primers.creator_entry_number)",
                                 viewonly = True)
+
+
+    @staticmethod
+    def get_by_id(tsession, creator, creator_entry_number):
+        '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
+        return tsession.query(Plasmid).filter(and_(Plasmid.creator == creator, Plasmid.creator_entry_number == creator_entry_number)).one()
+
 
     def get_id(self):
         '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
@@ -322,7 +355,7 @@ class Plasmid(DeclarativeBasePlasmid):
         d['primers'] = []
         if not only_basic_details:
             for prmr in self.primers:
-                d['primers'].append(row_to_dict(prmr))
+                d['primers'].append(prmr.to_dict())
 
         # Retrieve the list of associated features
         d['features'] = []
