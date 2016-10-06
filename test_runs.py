@@ -168,14 +168,15 @@ def main():
     asdf = Plasmid_Utilities(tsession)
     qwer = Plasmid_View_Tools(tsession)
 
-    # qwer.get_plasmid_indicies(('JL', '17'))
     # asdf.generate_ape_from_database_ID('JL', '1', write_to_file=True)
     # generate_part_plasmids(asdf)
     # generate_cassette_plasmids(asdf)
-    generate_multicassette_plasmids(asdf)
+    # generate_multicassette_plasmids(asdf)
     # asdf.update_features()
+    asdf.nuke_plasmids([('JL', 59)])
 
-    # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 17))
+
+    # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 3))
     # print feature_indicies_list
     # print part_indicies_list
 
