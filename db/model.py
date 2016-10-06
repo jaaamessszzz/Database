@@ -4,7 +4,7 @@ import traceback
 
 import numpy
 
-from sqlalchemy import Table, ForeignKey, Column
+from sqlalchemy import Table, ForeignKey, Column, UniqueConstraint, FetchedValue
 from sqlalchemy.dialects.mysql import DOUBLE, TINYINT, LONGBLOB
 from sqlalchemy.types import DateTime, Enum, Float, TIMESTAMP, Integer, Text, Unicode, String
 from sqlalchemy.orm import relationship
@@ -75,16 +75,19 @@ class Primers(DeclarativeBasePlasmid):
 
     creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key = True)
     creator_entry_number = Column(Integer, nullable=False, primary_key = True)
-    secondary_id = Column(Unicode(100, collation = "utf8_bin"), nullable = False)
+    secondary_id = Column(Unicode(100, collation = "utf8_bin"), nullable = True)
     sequence = Column(Unicode(256, collation="utf8_bin"), nullable = False)
     direction = Column(Enum('F','R'), nullable=False)
     description = Column(Text(collation="utf8_bin"), nullable=False)
-    TM = Column(Integer, nullable=False)
+    TM = Column(Float, nullable=False)
     date = Column(TIMESTAMP, nullable=False)
     GC = Column(Float, nullable=True)
     length = Column(Float, nullable=True)
     template_id = Column(Unicode(200, collation="utf8_bin"), nullable = True)
-    template_description = Column(Unicode(200, collation="utf8_bin"), nullable = True)
+    template_description = Column(Text(collation="utf8_bin"), nullable = True)
+
+    UniqueConstraint('sequence', 'sequence', name = 'secondary_id_2')
+    UniqueConstraint('sequence', 'direction', name = 'secondary_id_3')
 
 
     def get_id(self):
@@ -92,10 +95,19 @@ class Primers(DeclarativeBasePlasmid):
         return 'o{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d['__id__'] = self.get_id() # this is easier to work with for the website hashtables
+        return d
+
+
     @staticmethod
     def add(tsession, d, silent = True):
 
         try:
+            sequence = d['sequence']
+
             for f in Primers._optional_fields:
                 if f not in d:
                     d[f] = None
@@ -108,6 +120,21 @@ class Primers(DeclarativeBasePlasmid):
             for k, v in d.iteritems():
                 if type(v) == float and numpy.isnan(v):
                     d[k] = None
+
+            assert(len(sequence) < 256)
+
+            # Calculate GC content
+            gc = Primers.calculate_gc(sequence)
+            if 'GC' in d and d['GC'] != None:
+                assert(abs(d['GC'] - gc) < 0.01)
+            d['GC'] = gc
+
+            # Calculate length
+            primer_length = len(sequence)
+            if 'length' in d and d['length'] != None:
+                assert(d['length'] == primer_length)
+            d['length'] = primer_length
+
             db_record_object = Primers(**d)
 
             if not silent:
@@ -118,6 +145,61 @@ class Primers(DeclarativeBasePlasmid):
             tsession.add(db_record_object)
             tsession.flush()
 
+            # Note: Because we use a MySQL trigger, SQLAlchemy does not know to update creator_entry_number so db_record_object.creator_entry_number will return zero
+            #       I looked into this for an hour and tried using FetchedValue but gave up on it. Other solutions: i) use PostgreSQL; ii) define the trigger using DDL in SQLAlchemy.
+
+            if not silent:
+                colortext.pcyan('Added this record:')
+                print(db_record_object)
+                print('')
+
+            return db_record_object
+        except:
+            raise
+
+
+    @staticmethod
+    def calculate_gc(sequence):
+        gc = 0
+        for c in sequence.lower():
+            if c == 'g' or c == 'c':
+                gc += 1
+            else:
+                assert(c == 'a' or c == 't')
+        return float(gc) / float(len(sequence))
+
+
+    def add_primer_plasmid(self, tsession, associated_plasmid, silent = True):
+        '''
+        Add a PlasmidPrimer record for this primer
+        This was meant to be a staticmethod which added both the Primers record and the PlasmidPrimer record.
+        However, I hit a snag. Because we use a MySQL trigger, SQLAlchemy does not know to update creator_entry_number
+        so db_record_object.creator_entry_number will return zero. There are potential fixes but I looked into this
+        for an hour and gave up on it.
+
+        Potential fixes: i) use PostgreSQL; ii) define the trigger using DDL in SQLAlchemy.
+
+        :param tsession:
+        :param associated_plasmid:
+        :param silent:
+        :return:
+        '''
+        try:
+            # Add PlasmidPrimer record
+            db_record_object = PlasmidPrimer(**dict(
+                plasmid_creator = associated_plasmid.creator,
+                plasmid_creator_entry_number = associated_plasmid.creator_entry_number,
+                primer_creator = self.creator,
+                primer_creator_entry_number = self.creator_entry_number,
+            ))
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
             return db_record_object
         except:
             raise
@@ -173,6 +255,22 @@ class Publication_Plasmid(DeclarativeBasePlasmid):
     Deprecated = Column(TINYINT(1), default = 0, nullable = False)
 
 
+class PlasmidPrimer(DeclarativeBasePlasmid):
+    __tablename__ = 'PlasmidPrimer'
+
+    plasmid_creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
+    plasmid_creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    primer_creator = Column(Unicode(5), ForeignKey('Primers.creator'), nullable = False, primary_key = True)
+    primer_creator_entry_number = Column(Integer, ForeignKey('Primers.creator_entry_number'), nullable = False, primary_key = True)
+
+    plasmid = relationship('Plasmid', primaryjoin = 'and_(Plasmid.creator == PlasmidPrimer.plasmid_creator, Plasmid.creator_entry_number == PlasmidPrimer.plasmid_creator_entry_number)')
+    primer = relationship('Primers', primaryjoin = 'and_(Primers.creator == PlasmidPrimer.primer_creator, Primers.creator_entry_number == PlasmidPrimer.primer_creator_entry_number)')
+
+
+    def __repr__(self):
+        return 'Plasmid: {0}, Primer: {1}'.format(self.plasmid, self.primer)
+
+
 # TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
@@ -196,6 +294,19 @@ class Plasmid(DeclarativeBasePlasmid):
                                 primaryjoin = "and_(Plasmid.creator == Publication_Plasmid.creator, Plasmid.creator_entry_number == Publication_Plasmid.creator_entry_number, Publication_Plasmid.Deprecated == 0)",
                                 secondaryjoin = "Publication_Plasmid.PublicationID == Publication.ID",
                                 viewonly = True)
+
+    primers = relationship("Primers",
+                                secondary = PlasmidPrimer.__table__,
+                                primaryjoin = "and_(Plasmid.creator == PlasmidPrimer.plasmid_creator, Plasmid.creator_entry_number == PlasmidPrimer.plasmid_creator_entry_number)",
+                                secondaryjoin = "and_(PlasmidPrimer.primer_creator == Primers.creator, PlasmidPrimer.primer_creator_entry_number == Primers.creator_entry_number)",
+                                viewonly = True)
+
+
+    @staticmethod
+    def get_by_id(tsession, creator, creator_entry_number):
+        '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
+        return tsession.query(Plasmid).filter(and_(Plasmid.creator == creator, Plasmid.creator_entry_number == creator_entry_number)).one()
+
 
     def get_id(self):
         '''Return a canonically formatted string to identify the plasmid in stores e.g. "pJL0023".'''
@@ -240,6 +351,12 @@ class Plasmid(DeclarativeBasePlasmid):
                     pubd['description'] = description
                     d['publications'].append(pubd)
 
+        # Retrieve the list of associated primers
+        d['primers'] = []
+        if not only_basic_details:
+            for prmr in self.primers:
+                d['primers'].append(prmr.to_dict())
+
         # Retrieve the list of associated features
         d['features'] = []
         if not only_basic_details:
@@ -262,8 +379,8 @@ class Plasmid(DeclarativeBasePlasmid):
                              Plasmid.creator == Cassette_Assembly.Part_creator,
                              Plasmid.creator_entry_number == Cassette_Assembly.Part_creator_entry_number))
 
-            print('*!' * 100)
-            print(cassette_parts)
+            #print('*!' * 100)
+            #print(cassette_parts)
             for cassette_assembly, cassette_part_plasmid in cassette_parts:
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
                 part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
@@ -283,7 +400,23 @@ class Plasmid(DeclarativeBasePlasmid):
         d['details'] = None
         d['printed_plasmid_type'] = d['plasmid_type'].title() # used by the website for longer descriptions e.g. "Part 3, 4"
         part_numbers = None
-        if self.plasmid_type == 'part':
+
+        if self.plasmid_type == 'other':
+            resistance, vector = None, None
+            try:
+                resistance = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
+            except:
+                d['errors'].append('This plasmid is missing am Other_Plasmid record so the resistance is unknown.')
+            try:
+                vector = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().vector or None
+            except:
+                # Storing the vector ID is optional
+                pass
+            d['details'] = dict(
+                resistance = resistance,
+                vector = vector,
+            )
+        elif self.plasmid_type == 'part':
             resistance, part_number = None, None
             try:
                 resistance = tsession.query(Part_Plasmid).filter(and_(Part_Plasmid.creator == self.creator, Part_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
@@ -352,8 +485,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
-            print "%s\t%s\t%s\t%s" % (
-            plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
+            #print "%s\t%s\t%s\t%s" % (plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
 
             part_types.append(part_type.part_number)
 
@@ -448,6 +580,7 @@ class Plasmid(DeclarativeBasePlasmid):
     def __repr__(self):
         return 'Internal numbering: {0} {1}\n' \
             'plasmid_name: {2}'.format(self.creator, self.creator_entry_number, self.plasmid_name)
+
 
 ######
 
@@ -609,6 +742,49 @@ class Origin(DeclarativeBasePlasmid):
     Origin = Column(Unicode(100, collation="utf8_bin"), nullable=False, primary_key=True)
 
 
+class Other_Plasmid(DeclarativeBasePlasmid):
+    __tablename__ = 'Other_Plasmid'
+
+    _required_fields = ['creator', 'creator_entry_number', 'resistance']
+
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable=False, primary_key=True)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable=False, primary_key=True)
+    resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False)
+    vector = Column(Unicode(32, collation = "utf8_bin"), nullable = True)
+
+    plasmid = relationship('Plasmid', primaryjoin='and_(Plasmid.creator == Other_Plasmid.creator, Plasmid.creator_entry_number == Other_Plasmid.creator_entry_number)')
+
+
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Other_Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
+
+
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d.update(row_to_dict(self.plasmid))
+        d['__id__'] = self.plasmid.get_id() # this is easier to work with for the website hashtables
+        return d
+
+
+    def __repr__(self):
+        return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
+
+
 class Part_Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Part_Plasmid'
 
@@ -709,7 +885,7 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     def get_details(self, tsession):
         '''Returns details about a feature.'''
         feature_details = self.feature.get_details(tsession)
-        plasmid_sequence = self.plasmid.sequence
+        plasmid_sequence = self.plasmid.sequence.upper().strip()
         feature_sequence = self.feature.Feature_sequence.upper().strip()
         feature_type = self.feature.ftype
         indices = []
@@ -728,28 +904,28 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
                 ))
             else:
                 indices.append(dict(
-                        name = self.feature_name,
-                        start = instance.start(),
-                        end = instance.end(),
+                    name = self.feature_name,
+                    start = instance.start(),
+                    end = instance.end(),
                 ))
 
         for instance in re.finditer(reverse_complement(feature_sequence), plasmid_sequence):
             if self.feature.Feature_type == 'Restrxn Type II':
                 indices.append(dict(
-                        name = self.feature_name + ' R',
-                        start = instance.start(),
-                        end = instance.end(),
+                    name = self.feature_name + ' R',
+                    start = instance.start(),
+                    end = instance.end(),
                 ))
                 indices.append(dict(
-                        name = self.feature_name + ' Overhang',
-                        start = instance.start() - 5,
-                        end = instance.start() - 1,
+                    name = self.feature_name + ' Overhang',
+                    start = instance.start() - 5,
+                    end = instance.start() - 1,
                 ))
             else:
                 indices.append(dict(
-                        name = self.feature_name,
-                        start = instance.start(),
-                        end = instance.end(),
+                    name = self.feature_name,
+                    start = instance.start(),
+                    end = instance.end(),
                 ))
         feature_details['indices'] = indices
         return feature_details
