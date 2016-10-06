@@ -379,8 +379,8 @@ class Plasmid(DeclarativeBasePlasmid):
                              Plasmid.creator == Cassette_Assembly.Part_creator,
                              Plasmid.creator_entry_number == Cassette_Assembly.Part_creator_entry_number))
 
-            print('*!' * 100)
-            print(cassette_parts)
+            #print('*!' * 100)
+            #print(cassette_parts)
             for cassette_assembly, cassette_part_plasmid in cassette_parts:
                 # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
                 part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
@@ -400,7 +400,23 @@ class Plasmid(DeclarativeBasePlasmid):
         d['details'] = None
         d['printed_plasmid_type'] = d['plasmid_type'].title() # used by the website for longer descriptions e.g. "Part 3, 4"
         part_numbers = None
-        if self.plasmid_type == 'part':
+
+        if self.plasmid_type == 'other':
+            resistance, vector = None, None
+            try:
+                resistance = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
+            except:
+                d['errors'].append('This plasmid is missing am Other_Plasmid record so the resistance is unknown.')
+            try:
+                vector = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().vector or None
+            except:
+                # Storing the vector ID is optional
+                pass
+            d['details'] = dict(
+                resistance = resistance,
+                vector = vector,
+            )
+        elif self.plasmid_type == 'part':
             resistance, part_number = None, None
             try:
                 resistance = tsession.query(Part_Plasmid).filter(and_(Part_Plasmid.creator == self.creator, Part_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
@@ -469,8 +485,7 @@ class Plasmid(DeclarativeBasePlasmid):
 
         for plasmid, part_plasmid, part_plasmid_part, part_type in part_plasmids_query:
 
-            print "%s\t%s\t%s\t%s" % (
-            plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
+            #print "%s\t%s\t%s\t%s" % (plasmid.plasmid_name, plasmid.creator, plasmid.creator_entry_number, part_plasmid_part.part_number)
 
             part_types.append(part_type.part_number)
 
@@ -725,6 +740,49 @@ class Origin(DeclarativeBasePlasmid):
     __tablename__ = 'Origin'
 
     Origin = Column(Unicode(100, collation="utf8_bin"), nullable=False, primary_key=True)
+
+
+class Other_Plasmid(DeclarativeBasePlasmid):
+    __tablename__ = 'Other_Plasmid'
+
+    _required_fields = ['creator', 'creator_entry_number', 'resistance']
+
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable=False, primary_key=True)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable=False, primary_key=True)
+    resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False)
+    vector = Column(Unicode(32, collation = "utf8_bin"), nullable = True)
+
+    plasmid = relationship('Plasmid', primaryjoin='and_(Plasmid.creator == Other_Plasmid.creator, Plasmid.creator_entry_number == Other_Plasmid.creator_entry_number)')
+
+
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Other_Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
+
+
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d.update(row_to_dict(self.plasmid))
+        d['__id__'] = self.plasmid.get_id() # this is easier to work with for the website hashtables
+        return d
+
+
+    def __repr__(self):
+        return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
 
 
 class Part_Plasmid(DeclarativeBasePlasmid):
