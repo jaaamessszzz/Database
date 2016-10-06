@@ -173,7 +173,7 @@ def main():
     # generate_cassette_plasmids(asdf)
     # generate_multicassette_plasmids(asdf)
     # asdf.update_features()
-    asdf.nuke_plasmids([('JL', 59)])
+    asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62)])
 
 
     # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 3))
