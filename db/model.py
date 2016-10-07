@@ -1051,10 +1051,10 @@ class CDS_Mutant_Constituent(DeclarativeBasePlasmid):
     __tablename__ = 'CDS_Mutant_Constituent'
 
     ID = Column(Integer, ForeignKey('CDS_Mutant.ID'), nullable=False, primary_key=True)
-    mutation = Column(Unicode(16, collation="utf8_bin"), nullable=False)
+    mutation = Column(String(3), nullable=False)
     position = Column(Integer, nullable=False)
-    wt_AA = Column(Unicode(1, collation="utf8_bin"), nullable=False)
-    mut_AA = Column(Unicode(1, collation="utf8_bin"), nullable=False)
+    wt_AA = Column(String(1), nullable=False)
+    mut_AA = Column(String(1), nullable=False)
     Description = Column(Text(), nullable=True)
 
     @staticmethod
