@@ -206,7 +206,7 @@ def main():
     my_shit = tsession.query(CDS_Mutant_Constituent)
 
     for thing in my_shit:
-        print thing.wt_ID
+        print thing.wt_AA
 
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
     # for plasmid, part_plasmid_part in my_plasmids:
