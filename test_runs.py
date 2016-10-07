@@ -173,7 +173,7 @@ def main():
     # generate_cassette_plasmids(asdf)
     # generate_multicassette_plasmids(asdf)
     # asdf.update_features()
-    # asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62)])
+    asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62)])
 
 
     # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 3))
@@ -198,15 +198,10 @@ def main():
     # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
     # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False )
 
-    Plasmid_Feature_ID = 2858 # WT 1F10 Chain 1/B
-    mutation_list = [('D', 25, 'A'),('G', 57, 'A'),('K', 78, 'A')]
-    Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
-    asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=True )
-
-    my_shit = tsession.query(CDS_Mutant_Constituent)
-
-    for thing in my_shit:
-        print thing.wt_AA
+    # Plasmid_Feature_ID = 2858 # WT 1F10 Chain 1/B
+    # mutation_list = [('D', 25, 'A'),('G', 57, 'A'),('K', 78, 'A')]
+    # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
+    # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=True )
 
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
     # for plasmid, part_plasmid_part in my_plasmids:
