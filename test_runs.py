@@ -1,7 +1,7 @@
 from Utilities.Plasmid_Utilities import Plasmid_Utilities
 from Utilities.Plasmid_View_Tools import Plasmid_View_Tools
 from db.interface import DatabaseInterface
-from db.model import Feature, Plasmid_File, Plasmid, Part_Plasmid_Part
+from db.model import Feature, Plasmid_File, Plasmid, Part_Plasmid_Part, CDS_Mutant_Constituent
 from sqlalchemy import and_
 
 import sys
@@ -203,7 +203,7 @@ def main():
     Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
     asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=True )
 
-    my_shit = tsession.query(CDS_mutant_constituents)
+    my_shit = tsession.query(CDS_Mutant_Constituent)
 
     for thing in my_shit:
         print thing.wt_ID
