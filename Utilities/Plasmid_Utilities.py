@@ -838,12 +838,14 @@ class Plasmid_Utilities(object):
             self.tsession.commit()
 
     def fetch_mutant_from_db(self, user_query):
-        mutant_info = self.tsession.query(CDS_Mutant, CDS_Mutant_Constituent, Plasmid_Feature, Plasmid)\
-            .filter(CDS_Mutant.ID == CDS_Mutant_Constituent.ID)\
-            .filter(Plasmid_Feature.ID == CDS_Mutant.Plasmid_Feature_ID)\
-            .filter(Plasmid_Feature.creator == Plasmid.creator)\
-            .filter(Plasmid_Feature.creator_entry_number == Plasmid.creator_entry_number)\
-            .filter(CDS_Mutant.ID == user_query)
+        mutant_info = self.tsession.query(CDS_Mutant, CDS_Mutant_Constituent, Plasmid_Feature, Plasmid).filter(
+            and_(CDS_Mutant.ID == CDS_Mutant_Constituent.ID,
+                 Plasmid_Feature.ID == CDS_Mutant.Plasmid_Feature_ID,
+                 Plasmid_Feature.creator == Plasmid.creator,
+                 Plasmid_Feature.creator_entry_number == Plasmid.creator_entry_number,
+                 CDS_Mutant.ID == user_query
+                 )
+        )
 
         # SELECT * FROM CDS_Mutant INNER JOIN CDS_Mutant_Constituent ON CDS_Mutant.ID == CDS_Mutant_Constituent.ID
 
