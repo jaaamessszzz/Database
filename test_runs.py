@@ -203,6 +203,11 @@ def main():
     Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
     asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=True )
 
+    my_shit = tsession.query(CDS_mutant_constituents)
+
+    for thing in my_shit:
+        print thing.wt_ID
+
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
     # for plasmid, part_plasmid_part in my_plasmids:
     #     input_dict = {'creator': plasmid.creator,
