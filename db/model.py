@@ -271,7 +271,6 @@ class PlasmidPrimer(DeclarativeBasePlasmid):
         return 'Plasmid: {0}, Primer: {1}'.format(self.plasmid, self.primer)
 
 
-# TEMP for testing Find_Primers.py
 class Plasmid(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid'
 
@@ -284,7 +283,7 @@ class Plasmid(DeclarativeBasePlasmid):
     plasmid_name = Column(Unicode(100, collation="utf8_bin"), nullable=True, unique=True)
     plasmid_type = Column(Enum('part', 'cassette', 'multicassette', 'other'), nullable=False)
     location = Column(Unicode(250, collation="utf8_bin"), nullable=False)
-    description = Column(Text(), nullable=False)
+    description = Column(Text(collation="utf8_bin"), nullable=False)
     sequence = Column(Text(), nullable=False)
     status = Column(Enum('designed', 'verified', 'abandoned'), nullable=False)
     date = Column(TIMESTAMP, nullable=False)
@@ -1201,3 +1200,31 @@ class PublicationAuthor(DeclarativeBasePlasmid):
     MiddleNames = Column(Unicode(64), nullable = True)
     Surname = Column(Unicode(64), nullable = True)
 
+class Plasmid_Feature_Design(DeclarativeBasePlasmid):
+    __tablename__ = 'Plasmid'
+
+    parent_creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
+    parent_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
+    child_creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
+    child_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
+    feature_ID = Column(Integer, nullable=False, primary_key=True)
+    design_sequence = Column(Text(), nullable=False)
+    design_name = Column(Unicode(128, collation="utf8_bin"), nullable=False)
+    design_description = Column(Text(), nullable=True)
+
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Plasmid_Feature_Design(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
