@@ -1201,7 +1201,7 @@ class PublicationAuthor(DeclarativeBasePlasmid):
     Surname = Column(Unicode(64), nullable = True)
 
 class Plasmid_Feature_Design(DeclarativeBasePlasmid):
-    __tablename__ = 'Plasmid'
+    __tablename__ = 'Plasmid_Feature_Design'
 
     parent_creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
     parent_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
