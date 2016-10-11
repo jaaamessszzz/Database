@@ -1080,12 +1080,16 @@ class Plasmid_Utilities(object):
                                              'design_name': feature_design['design_name'],
                                              'design_description': feature_design['design_description']
                                              }
+
+                print feature_design_input_dict
+
                 feature_design_entry = Plasmid_Feature_Design.add(self.tsession, feature_design_input_dict)
                 print feature_design_entry
 
             self.tsession.commit()
 
         except:
+            print 'fak'
             self.tsession.rollback()
 
         print design_Plasmid_entry
