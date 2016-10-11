@@ -1020,6 +1020,7 @@ class Plasmid_Utilities(object):
         plasmid_query_list = [WT_set.filter(Plasmid_Feature.ID == design['feature_ID']).one() for design in design_list]
 
         parent_plasmid_set = set([(feature_source.Plasmid.creator, feature_source.Plasmid.creator_entry_number) for feature_source in plasmid_query_list])
+        print parent_plasmid_set
 
         if len(parent_plasmid_set) != 1:
             raise Plasmid_Exception('All target features need to be from the same Plasmid!')
