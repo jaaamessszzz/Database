@@ -362,6 +362,9 @@ class Plasmid_Utilities(object):
           *
         :return:
         '''
+
+        #todo: write checks for other plasmids? If that exists?
+
         if assembly_type.lower() == 'part':
             if part_type == '1' or part_type == '5':
                 if input_dict['sequence'].count('GAGACG') != 1:
@@ -387,7 +390,8 @@ class Plasmid_Utilities(object):
             if input_dict['sequence'].count('GAGACC') != 0:
                 raise Plasmid_Exception('There are BsaI sites in your completed cassette assembly! This thing is going to get wrecked during the final digestion step of the Golden Gate Assembly!')
 
-            # I need to implement more complicated logic when checking for cassete connector sites in cassette assemblies
+            #todo: Uncomment this entire section and make the correct checks... comments below were made assuming the ConLS connector was correct... it was not.
+            # I need to implement more complicated logic when checking for cassette connector sites in cassette assemblies
             # It looks like LS contains a forward BsmBI site and all other connectors have a reverse BsmBI site...
             # Not going to deal with that right now...
 
@@ -995,7 +999,7 @@ class Plasmid_Utilities(object):
             else:
                 raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
 
-    def design_feature(self, design_list, design_ID, design_description=None):
+    def design_feature(self, design_list, design_ID, design_description):
         """
         This function will allow users to replace features in annotated template plasmids with their own designs
         :param design_list: list of dicts with keys['feature_ID', 'design_sequence'] to produce a new plasmid
@@ -1026,7 +1030,6 @@ class Plasmid_Utilities(object):
             feature_query = WT_set.filter(Plasmid_Feature.ID == feature_design['feature_ID']).one()
             WT_feature = feature_query.Feature.Feature_sequence
 
-            instance_count = 0
             # Adding support for features that occur more than once in a plasmid
             # If instances > 1, then replace features in reverse so that feature indicies from WT remain the same
 
@@ -1045,11 +1048,18 @@ class Plasmid_Utilities(object):
                                                                                                   feature_query.Plasmid.creator,
                                                                                                   feature_query.Plasmid.creator_entry_number))
 
-        print design_intermediate
+        #todo: implement plasmid_checks()
+        final_designed_sequence = design_intermediate
 
         input_dict = {'creator': self.user_ID,
                       'plasmid_name': design_ID,
-                      'plasmid_type': 'design'
+                      'plasmid_type': 'design',
+                      'location': 'BUFU',
+                      'description': design_description,
+                      'sequence': final_designed_sequence,
+                      'status': 'designed'
                       }
-        # Plasmid_Feature_Design.add()
+
+        design_Plasmid_entry = Plasmid.add(self.tsession, input_dict)
+        print design_Plasmid_entry
 
