@@ -1069,8 +1069,8 @@ class Plasmid_Utilities(object):
         print design_Plasmid_entry
 
         for feature_design in design_list:
-            feature_design_input_dict = {'parent_creator': parent_plasmid_set[0][0],
-                                         'parent_creator_entry_number': parent_plasmid_set[0][1],
+            feature_design_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
+                                         'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
                                          'child_creator': design_Plasmid_entry.creator,
                                          'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
                                          'feature_ID': feature_design['feature_ID'],
