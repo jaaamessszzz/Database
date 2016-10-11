@@ -172,7 +172,7 @@ def main():
     # generate_part_plasmids(asdf)
     # generate_cassette_plasmids(asdf)
     # generate_multicassette_plasmids(asdf)
-    # asdf.update_features()
+    asdf.update_features()
     # asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62), ('JL', 63)])
 
     # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 3))
@@ -209,7 +209,7 @@ def main():
                   {'feature_ID': 2864, 'design_sequence': '|---Terminator---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'}
                   ]
 
-    asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF', 'ALL YOUR DERPS BELONG TO US')
+    # asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF', 'ALL YOUR DERPS BELONG TO US')
 
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
     # for plasmid, part_plasmid_part in my_plasmids:
