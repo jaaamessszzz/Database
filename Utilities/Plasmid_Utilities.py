@@ -1019,7 +1019,9 @@ class Plasmid_Utilities(object):
         # Make sure all features are from the same plasmid
         plasmid_query_list = [WT_set.filter(Plasmid_Feature.ID == design['feature_ID']).one() for design in design_list]
 
-        if len(set([(feature_source.Plasmid.creator, feature_source.Plasmid.creator_entry_number) for feature_source in plasmid_query_list])) != 1:
+        parent_plasmid_set = set([(feature_source.Plasmid.creator, feature_source.Plasmid.creator_entry_number) for feature_source in plasmid_query_list])
+
+        if len(parent_plasmid_set) != 1:
             raise Plasmid_Exception('All target features need to be from the same Plasmid!')
 
         # Generate designs
@@ -1051,15 +1053,22 @@ class Plasmid_Utilities(object):
         #todo: implement plasmid_checks()
         final_designed_sequence = design_intermediate
 
-        input_dict = {'creator': self.user_ID,
-                      'plasmid_name': design_ID,
-                      'plasmid_type': 'design',
-                      'location': 'BUFU',
-                      'description': design_description,
-                      'sequence': final_designed_sequence,
-                      'status': 'designed'
-                      }
+        plasmid_input_dict = {'creator': self.user_ID,
+                              'plasmid_name': design_ID,
+                              'plasmid_type': 'design',
+                              'location': 'BUFU',
+                              'description': design_description,
+                              'sequence': final_designed_sequence,
+                              'status': 'designed'
+                              }
 
-        design_Plasmid_entry = Plasmid.add(self.tsession, input_dict)
+        design_Plasmid_entry = Plasmid.add(self.tsession, plasmid_input_dict)
+
+        # for feature_design in design_list:
+        #     feature_design_input_dict = {'parent_creator' : WT_set
+        #     }
+
+        self.tsession.rollback()
+
         print design_Plasmid_entry
 
