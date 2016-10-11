@@ -210,7 +210,7 @@ def main():
     #               ]
     # asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF', 'ALL YOUR DERPS BELONG TO US')
 
-    input_dict = {'feature_ID': 2882, 'design_sequence': 'GTTTCAGAGCATGCTGGAAACAGCATAGCAAGTTGAAATAAGGTCTTCCCCGCATCCGCCGATACCAGCCGAAAGGCCCTTGGCAGCGACGGCACCGAGTCGGTGCTTTTTT', 'design_name': 'mhf/37', 'design_description': 'Some design from Kale to test.'}
+    input_dict = [{'feature_ID': 2882, 'design_sequence': 'GTTTCAGAGCATGCTGGAAACAGCATAGCAAGTTGAAATAAGGTCTTCCCCGCATCCGCCGATACCAGCCGAAAGGCCCTTGGCAGCGACGGCACCGAGTCGGTGCTTTTTT', 'design_name': 'mhf/37', 'design_description': 'Some design from Kale to test.'}]
     asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF', 'Test design from Kale')
 
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
