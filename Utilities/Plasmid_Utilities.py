@@ -1005,6 +1005,8 @@ class Plasmid_Utilities(object):
         :param design_list: list of dicts with keys['feature_ID', 'design_sequence'] to produce a new plasmid
         :param feature_ID: Feature ID found in Plasmid_Feature.ID
         :param design_sequence: Sequence of the designed feature
+        :param design_ID: Essentially the User ID for this designed plasmid
+        :param design_description: Description for the designed plasmid
         :return:
         """
 
@@ -1054,22 +1056,31 @@ class Plasmid_Utilities(object):
         #todo: implement plasmid_checks()
         final_designed_sequence = design_intermediate
 
-        plasmid_input_dict = {'creator': self.user_ID,
-                              'plasmid_name': design_ID,
-                              'plasmid_type': 'design',
-                              'location': 'BUFU',
-                              'description': design_description,
-                              'sequence': final_designed_sequence,
-                              'status': 'designed'
-                              }
 
-        design_Plasmid_entry = Plasmid.add(self.tsession, plasmid_input_dict)
+        try:
+            plasmid_input_dict = {'creator': self.user_ID,
+                                  'plasmid_name': design_ID,
+                                  'plasmid_type': 'design',
+                                  'location': 'BUFU',
+                                  'description': design_description,
+                                  'sequence': final_designed_sequence,
+                                  'status': 'designed'
+                                  }
 
-        # for feature_design in design_list:
-        #     feature_design_input_dict = {'parent_creator' : WT_set
-        #     }
+            design_Plasmid_entry = Plasmid.add(self.tsession, plasmid_input_dict)
 
-        self.tsession.rollback()
+            for feature_design in design_list:
+                feature_design_input_dict = {'parent_creator': parent_plasmid_set[0][0],
+                                             'parent_creator_entry_number': parent_plasmid_set[0][1],
+                                             'child_creator': design_Plasmid_entry.creator,
+                                             'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
+                                             'feature_ID': feature_design['feature_ID'],
+                                             'design_sequence': feature_design['design_sequence'],
+                                             'design_name':
+                }
+
+        except:
+            self.tsession.rollback()
 
         print design_Plasmid_entry
 
