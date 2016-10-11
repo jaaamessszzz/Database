@@ -172,7 +172,7 @@ def main():
     # generate_part_plasmids(asdf)
     # generate_cassette_plasmids(asdf)
     # generate_multicassette_plasmids(asdf)
-    # asdf.update_features()
+    asdf.update_features()
     # asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62), ('JL', 63)])
 
     # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 3))
@@ -210,8 +210,8 @@ def main():
     #               ]
     # asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF', 'ALL YOUR DERPS BELONG TO US')
 
-    input_dict = [{'feature_ID': 2882, 'design_sequence': 'GTTTCAGAGCATGCTGGAAACAGCATAGCAAGTTGAAATAAGGTCTTCCCCGCATCCGCCGATACCAGCCGAAAGGCCCTTGGCAGCGACGGCACCGAGTCGGTGCTTTTTT', 'design_name': 'mhf/37', 'design_description': 'Some design from Kale to test.'}]
-    asdfasdf = asdf.design_feature(input_dict, 'pJL_Kale-test', 'Test design from Kale')
+    # input_dict = [{'feature_ID': 2882, 'design_sequence': 'GTTTCAGAGCATGCTGGAAACAGCATAGCAAGTTGAAATAAGGTCTTCCCCGCATCCGCCGATACCAGCCGAAAGGCCCTTGGCAGCGACGGCACCGAGTCGGTGCTTTTTT', 'design_name': 'mhf/37', 'design_description': 'Some design from Kale to test.'}]
+    # asdfasdf = asdf.design_feature(input_dict, 'pJL_Kale-test', 'Test design from Kale')
 
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
     # for plasmid, part_plasmid_part in my_plasmids:
