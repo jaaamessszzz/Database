@@ -1083,6 +1083,8 @@ class Plasmid_Utilities(object):
                 feature_design_entry = Plasmid_Feature_Design.add(self.tsession, feature_design_input_dict)
                 print feature_design_entry
 
+            self.commit()
+
         except:
             self.tsession.rollback()
 
