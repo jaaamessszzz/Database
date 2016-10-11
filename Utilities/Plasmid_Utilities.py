@@ -1068,6 +1068,7 @@ class Plasmid_Utilities(object):
                                   }
 
             design_Plasmid_entry = Plasmid.add(self.tsession, plasmid_input_dict)
+            print design_Plasmid_entry
 
             for feature_design in design_list:
                 feature_design_input_dict = {'parent_creator': parent_plasmid_set[0][0],
@@ -1076,8 +1077,11 @@ class Plasmid_Utilities(object):
                                              'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
                                              'feature_ID': feature_design['feature_ID'],
                                              'design_sequence': feature_design['design_sequence'],
-                                             'design_name':
-                }
+                                             'design_name': feature_design['design_name'],
+                                             'design_description': feature_design['design_description']
+                                             }
+                feature_design_entry = Plasmid_Feature_Design.add(self.tsession, feature_design_input_dict)
+                print feature_design_entry
 
         except:
             self.tsession.rollback()

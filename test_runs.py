@@ -198,15 +198,15 @@ def main():
     # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False )
 
     ### Feature Design!
-    input_dict = [{'feature_ID': 2862, 'design_sequence': '|---T7 Promoter---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2860, 'design_sequence': '|---Lac Operon---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2856, 'design_sequence': '|---LgBiT---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2857, 'design_sequence': '|---SmBiT---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2858, 'design_sequence': '|---WT 1F10 Chain 1/B---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2859, 'design_sequence': '|---WT 1F10 Chain 2/H---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2861, 'design_sequence': '|---ColE1---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2863, 'design_sequence': '|---KAN---|', 'design_description': 'HERP DERP'},
-                  {'feature_ID': 2864, 'design_sequence': '|---Terminator---|', 'design_description': 'HERP DERP'}
+    input_dict = [{'feature_ID': 2862, 'design_sequence': '|---T7 Promoter---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2860, 'design_sequence': '|---Lac Operon---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2856, 'design_sequence': '|---LgBiT---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2857, 'design_sequence': '|---SmBiT---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2858, 'design_sequence': '|---WT 1F10 Chain 1/B---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2859, 'design_sequence': '|---WT 1F10 Chain 2/H---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2861, 'design_sequence': '|---ColE1---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2863, 'design_sequence': '|---KAN---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'},
+                  {'feature_ID': 2864, 'design_sequence': '|---Terminator---|', 'design_name': 'ASDFASDF', 'design_description': 'HERP DERP'}
                   ]
 
     asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF', 'ALL YOUR DERPS BELONG TO US')
