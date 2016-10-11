@@ -173,8 +173,7 @@ def main():
     # generate_cassette_plasmids(asdf)
     # generate_multicassette_plasmids(asdf)
     # asdf.update_features()
-    asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62)])
-
+    # asdf.nuke_plasmids([('JL', 59), ('JL', 60), ('JL', 61), ('JL', 62), ('JL', 63)])
 
     # feature_indicies_list, part_indicies_list = qwer.get_plasmid_indicies(('AG', 3))
     # print feature_indicies_list
@@ -198,10 +197,19 @@ def main():
     # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
     # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False )
 
-    # Plasmid_Feature_ID = 2858 # WT 1F10 Chain 1/B
-    # mutation_list = [('D', 25, 'A'),('G', 57, 'A'),('K', 78, 'A')]
-    # Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = asdf.generate_mutant_sequence(Plasmid_Feature_ID, mutation_list)
-    # asdf.add_mutant_to_db( Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=True )
+    ### Feature Design!
+    input_dict = [{'feature_ID': 2862, 'design_sequence': '|---T7 Promoter---|'},
+                  {'feature_ID': 2860, 'design_sequence': '|---Lac Operon---|'},
+                  {'feature_ID': 2856, 'design_sequence': '|---LgBiT---|'},
+                  {'feature_ID': 2857, 'design_sequence': '|---SmBiT---|'},
+                  {'feature_ID': 2858, 'design_sequence': '|---WT 1F10 Chain 1/B---|'},
+                  {'feature_ID': 2859, 'design_sequence': '|---WT 1F10 Chain 2/H---|'},
+                  {'feature_ID': 2861, 'design_sequence': '|---ColE1---|'},
+                  {'feature_ID': 2863, 'design_sequence': '|---KAN---|'},
+                  {'feature_ID': 2864, 'design_sequence': '|---Terminator---|'}
+                  ]
+
+    asdfasdf = asdf.design_feature(input_dict, 'pJLASDFASDF')
 
     # my_plasmids = tsession.query(Plasmid, Part_Plasmid_Part).filter(and_(Plasmid.creator == Part_Plasmid_Part.creator, Plasmid.creator_entry_number == Part_Plasmid_Part.creator_entry_number))
     # for plasmid, part_plasmid_part in my_plasmids:

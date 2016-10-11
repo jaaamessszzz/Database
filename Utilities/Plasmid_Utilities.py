@@ -13,11 +13,11 @@ sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
-    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
-    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design
 
 class Plasmid_Exception(Exception): pass
 
@@ -127,10 +127,10 @@ class Plasmid_Utilities(object):
 
             if any(input_type == part_type for input_type in ['3', '3a']):
                 # Checks that input sequence does not start with MET
+                # todo: Remove constraint on MET, add warning instead
                 if input_sequences[0][:3].upper() == 'ATG':
                     # Do we need to raise? Or can we just remove the start codon for the user and inform them?
-                    raise Plasmid_Exception(
-                        'Please remove the start codon from your input sequence! The start codon is already in the part plasmid sequence.')
+                    print ('WARNING: The start codon is already in the part plasmid sequence, you do not need to include a MET start codon.')
 
                 # Checks that stop codons are not in the input coding sequence
                 if any(codon in [input_sequences[0][i:i + 3].upper() for i in range(0, len(input_sequences[0]), 3)] for codon in ['TAA', 'TAG', 'TGA']):
@@ -856,7 +856,7 @@ class Plasmid_Utilities(object):
             database_ID = plasmid.get_id()
             mutant_ID = cds_mutant.Mutant_ID
 
-        Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = self.generate_mutant_sequence( Plasmid_Feature_ID, mutation_tuples, write_to_file=True)
+        Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file = self.generate_mutant_sequence(Plasmid_Feature_ID, mutation_tuples, write_to_file=True)
 
         with open('{0}_MutID-{1:04d}.gb'.format(database_ID, mutant_ID), 'w+b') as file:
             file.write(mutant_genbank_file)
@@ -994,3 +994,62 @@ class Plasmid_Utilities(object):
 
             else:
                 raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
+
+    def design_feature(self, design_list, design_ID, design_description=None):
+        """
+        This function will allow users to replace features in annotated template plasmids with their own designs
+        :param design_list: list of dicts with keys['feature_ID', 'design_sequence'] to produce a new plasmid
+        :param feature_ID: Feature ID found in Plasmid_Feature.ID
+        :param design_sequence: Sequence of the designed feature
+        :return:
+        """
+
+        import pprint
+        pprint.pprint(design_list)
+
+        WT_set = self.tsession.query(Plasmid_Feature, Feature, Plasmid).filter(
+            and_(Plasmid_Feature.feature_name == Feature.Feature_name,
+                 Plasmid.creator == Plasmid_Feature.creator,
+                 Plasmid.creator_entry_number == Plasmid_Feature.creator_entry_number))
+
+        # Make sure all features are from the same plasmid
+        plasmid_query_list = [WT_set.filter(Plasmid_Feature.ID == design['feature_ID']).one() for design in design_list]
+
+        if len(set([(feature_source.Plasmid.creator, feature_source.Plasmid.creator_entry_number) for feature_source in plasmid_query_list])) != 1:
+            raise Plasmid_Exception('All target features need to be from the same Plasmid!')
+
+        # Generate designs
+        WT_sequence = plasmid_query_list[0].Plasmid.sequence.upper()
+        design_intermediate = WT_sequence.upper()
+
+        for feature_design in design_list:
+            feature_query = WT_set.filter(Plasmid_Feature.ID == feature_design['feature_ID']).one()
+            WT_feature = feature_query.Feature.Feature_sequence
+
+            instance_count = 0
+            # Adding support for features that occur more than once in a plasmid
+            # If instances > 1, then replace features in reverse so that feature indicies from WT remain the same
+
+            if len([instance for instance in re.finditer(WT_feature.upper(), design_intermediate.upper())]) == 1:
+                for instance in re.finditer(WT_feature.upper(), design_intermediate.upper()):
+                    design_intermediate = design_intermediate[:instance.start()] + feature_design['design_sequence'].upper() + design_intermediate[instance.end():]
+
+            elif len([instance for instance in re.finditer(WT_feature.upper(), design_intermediate.upper())]) > 1:
+                feature_indicies = [{'start': instance.start(), 'end': instance.end()} for instance in re.finditer(WT_feature.upper(), design_intermediate.upper())]
+
+                for feature_index in reversed(feature_indicies):
+                    design_intermediate = design_intermediate[:feature_index['start']] + feature_design['design_sequence'].upper() + design_intermediate[feature_index['end']:]
+
+            else:
+                raise Plasmid_Exception('An instance of {0} was not found in p{1}{2:04d}!'.format(feature_query.Plasmid_Feature.feature_name,
+                                                                                                  feature_query.Plasmid.creator,
+                                                                                                  feature_query.Plasmid.creator_entry_number))
+
+        print design_intermediate
+
+        input_dict = {'creator': self.user_ID,
+                      'plasmid_name': design_ID,
+                      'plasmid_type': 'design'
+                      }
+        # Plasmid_Feature_Design.add()
+
