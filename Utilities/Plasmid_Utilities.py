@@ -544,6 +544,7 @@ class Plasmid_Utilities(object):
 
 
     def add_features(self, current_plasmid_entry):
+        # todo: add BsmBI and BsaI sites for MoClo plasmids only
         features_query = self.tsession.query(Feature, Feature_Type).filter(
             Feature.Feature_type == Feature_Type.Feature_type)
         possible_features = [
