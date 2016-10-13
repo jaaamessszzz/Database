@@ -36,7 +36,7 @@ def reverse_complement(input_sequence):
     try:
         return ''.join(reversed([base_pair[base.upper()] for base in input_sequence]))
     except:
-        raise NotDNAException('The sequence is not a DNA (ACGT) sequence.')
+        raise NotDNAException('The sequence is not a DNA (AGCT) sequence.')
 
 
 def row_to_dict(r, keep_relationships = False):
