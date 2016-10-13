@@ -233,6 +233,9 @@ class Resistance(DeclarativeBasePlasmid):
     __tablename__ = 'Resistance'
 
     resistance = Column(Unicode(100, collation="utf8_bin"), nullable=False, primary_key=True)
+    suitable_for_parts = Column(TINYINT(1), default = 0, nullable = False)
+    suitable_for_others = Column(TINYINT(1), default = 1, nullable = False)
+    suitable_for_templates = Column(TINYINT(1), default = 1, nullable = False)
 
 
 class Users(DeclarativeBasePlasmid):
@@ -1228,3 +1231,10 @@ class Plasmid_Feature_Design(DeclarativeBasePlasmid):
             return db_record_object
         except:
             raise
+
+
+class Plasmid_Type(DeclarativeBasePlasmid):
+    __tablename__ = 'Plasmid_Type'
+
+    plasmid_type = Column(Unicode(64), nullable=False, primary_key=True)
+    show_on_add_plasmid_page = Column(TINYINT(1), default = 0, nullable=False)
