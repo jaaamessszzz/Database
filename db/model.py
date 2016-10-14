@@ -346,15 +346,15 @@ class Plasmid(DeclarativeBasePlasmid):
     ###############################
 
 
-    def _get_details_files(self, tsession, d):
+    def _get_details_files(self, tsession, engine, d, cache = None, fresh = False):
         d = d or self._get_details_basic()
         plasmid_files = tsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == self.creator, Plasmid_File.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_File.file_name)
         if plasmid_files.count() > 0:
             for pf in plasmid_files:
-                d['files'].append(pf.get_details(tsession))
+                d['files'].append(pf.get_details(tsession, engine))
 
 
-    def _get_details_publications(self, tsession, d):
+    def _get_details_publications(self, tsession, engine, d, cache = None, fresh = False):
         d = d or self._get_details_basic()
         for pub in self.publications:
             intersection_record = tsession.query(Publication_Plasmid).filter(and_(
@@ -370,21 +370,25 @@ class Plasmid(DeclarativeBasePlasmid):
                 d['publications'].append(pubd)
 
 
-    def _get_details_primers(self, tsession, d):
+    def _get_details_primers(self, tsession, engine, d, cache = None, fresh = False):
         d = d or self._get_details_basic()
         for prmr in self.primers:
             d['primers'].append(prmr.to_dict())
 
 
-    def _get_details_features(self, tsession, d):
+    def _get_details_features(self, tsession, engine, d, cache = None, fresh = False):
         d = d or self._get_details_basic()
+
         plasmid_features = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == self.creator, Plasmid_Feature.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_Feature.feature_name)
         if plasmid_features.count() > 0:
             for pf in plasmid_features:
-                d['features'].append(pf.get_details(tsession))
+                if cache:
+                    d['features'].append(cache.get_feature(pf.feature_name).get_details(tsession, engine, cache = cache))
+                else:
+                    d['features'].append(pf.get_details(tsession, engine))
 
 
-    def _get_details_part_indices_list(self, tsession, d, only_basic_details = False):
+    def _get_details_part_indices_list(self, tsession, engine, d, cache = None, fresh = False, only_basic_details = False):
         '''Retrieve a List of dicts with [part_name, part_number, starting_index, ending_index].'''
 
         d = d or self._get_details_basic()
@@ -398,16 +402,15 @@ class Plasmid(DeclarativeBasePlasmid):
         # print(cassette_parts)
         for cassette_assembly, cassette_part_plasmid in cassette_parts:
             # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
-            part_sequence, part_types = self.fetch_cassette_parts(tsession, [
-                (cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
+            part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
             if len(part_sequence) == 1:
                 part_sequence = part_sequence[0][4:-4]
                 for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
                     d['part_indices'].append(dict(
-                            name = cassette_part_plasmid.description,
-                            part_number = ', '.join(part_types),
-                            start = instance.start(),
-                            end = instance.end(),
+                        name = cassette_part_plasmid.description,
+                        part_number = ', '.join(part_types),
+                        start = instance.start(),
+                        end = instance.end(),
                     ))
 
 
@@ -416,7 +419,7 @@ class Plasmid(DeclarativeBasePlasmid):
     ##################################
 
 
-    def _get_cassette_plasmid_details(self, tsession, d, only_basic_details = False):
+    def _get_cassette_plasmid_details(self, tsession, engine, d, cache = None, fresh = False, only_basic_details = False):
 
         d = d or self._get_details_basic()
         assert (self.plasmid_type == 'cassette')
@@ -435,17 +438,25 @@ class Plasmid(DeclarativeBasePlasmid):
                     if pp_id not in parts_read:
                         parts_read[pp_id] = True
                         assert (pp.Part_number not in d['part_plasmids'])
-                        part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator,
-                                                                                  Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
-                        assert (part_plasmid_record.plasmid_type == 'part')
-                        d['part_plasmids'].append(part_plasmid_record.get_details(tsession))
+
+                        if cache:
+                            d['part_plasmids'].append(cache.get_plasmid(pp_id).get_details(tsession, engine, cache = cache))
+                            assert(d['part_plasmids'][-1]['plasmid_type'] == 'part')
+                        else:
+                            part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
+                            assert (part_plasmid_record.plasmid_type == 'part')
+                            d['part_plasmids'].append(part_plasmid_record.get_details(tsession, engine))
+
+
+
+
             except Exception, e:
                 colortext.warning(str(e))
                 colortext.warning(traceback.format_exc())
                 d['errors'].append('An error occurred retrieving data for this cassette assembly.')
 
 
-    def _get_other_plasmid_details(self, tsession, d, only_basic_details = False):
+    def _get_other_plasmid_details(self, tsession, engine, d, cache = None, fresh = False, only_basic_details = False):
 
         d = d or self._get_details_basic()
         assert(self.plasmid_type == 'other')
@@ -463,7 +474,7 @@ class Plasmid(DeclarativeBasePlasmid):
         d['details'] = dict(resistance = resistance, vector = vector)
 
 
-    def _get_part_plasmid_details(self, tsession, d, only_basic_details = False):
+    def _get_part_plasmid_details(self, tsession, engine, d, cache = None, fresh = False, only_basic_details = False):
 
         d = d or self._get_details_basic()
         assert (self.plasmid_type == 'part')
@@ -494,44 +505,48 @@ class Plasmid(DeclarativeBasePlasmid):
     ##################################
 
 
-    def get_details(self, tsession, only_basic_details = False):
+    def get_details(self, tsession, engine, cache = None, fresh = False, only_basic_details = False):
         '''.'''
 
-        d = self._get_details_basic()
+        if fresh or '__details__' not in self.__dict__:
 
-        # Fill in optional details
-        detail_functions = dict(
-            all = dict(
-                files = self._get_details_files,               # Retrieve the list of associated files
-                publications = self._get_details_publications, # Retrieve the list of associated publications
-                primers = self._get_details_primers,           # Retrieve the list of associated primers
-                features = self._get_details_features,         # Retrieve the list of associated features
-            ),
-            cassette = dict(
-                part_indices = self._get_details_part_indices_list,  # todo: add all relevant information to part index list (only name and indicies so far)
-                details = self._get_cassette_plasmid_details,
-            ),
-            other = dict(
-                details = self._get_other_plasmid_details,
-            ),
-            part = dict(
-                details = self._get_part_plasmid_details,
-            ),
-        )
+            d = self._get_details_basic()
 
-        # Fill in generic optional details
-        for detail_type, f in sorted(detail_functions['all'].iteritems()):
-            d[detail_type] = []
-            if not only_basic_details:
-                f(tsession, d)
+            # Fill in optional details
+            detail_functions = dict(
+                all = dict(
+                    files = self._get_details_files,               # Retrieve the list of associated files
+                    publications = self._get_details_publications, # Retrieve the list of associated publications
+                    primers = self._get_details_primers,           # Retrieve the list of associated primers
+                    features = self._get_details_features,         # Retrieve the list of associated features
+                ),
+                cassette = dict(
+                    part_indices = self._get_details_part_indices_list,  # todo: add all relevant information to part index list (only name and indicies so far)
+                    details = self._get_cassette_plasmid_details,
+                ),
+                other = dict(
+                    details = self._get_other_plasmid_details,
+                ),
+                part = dict(
+                    details = self._get_part_plasmid_details,
+                ),
+            )
 
-        # Fill in plasmid type-specific details
-        for detail_type, g in sorted(detail_functions.get(self.plasmid_type, {}).iteritems()):
-            d[detail_type] = []
-            if not only_basic_details:
-                g(tsession, d, only_basic_details)
+            # Fill in generic optional details
+            for detail_type, f in sorted(detail_functions['all'].iteritems()):
+                d[detail_type] = []
+                if not only_basic_details:
+                    f(tsession, engine, d, cache = cache, fresh = fresh)
 
-        return d
+            # Fill in plasmid type-specific details
+            for detail_type, g in sorted(detail_functions.get(self.plasmid_type, {}).iteritems()):
+                d[detail_type] = []
+                if not only_basic_details:
+                    g(tsession, engine, d, cache = cache, fresh = fresh, only_basic_details = only_basic_details)
+
+            self.__dict__['__details__'] = d
+
+        return self.__dict__['__details__']
 
 
 
@@ -730,24 +745,29 @@ class Feature(DeclarativeBasePlasmid):
     ftype = relationship('Feature_Type', primaryjoin='Feature_Type.Feature_type == Feature.Feature_type')
 
 
-    def get_details(self, tsession):
-        color = tsession.query(Feature_Type).filter(Feature_Type.Feature_type == self.Feature_type).one().color
+    def get_details(self, tsession, engine, cache = None, fresh = False):
 
-        protein_sequence_translation = None
-        try:
-            if len(self.Feature_sequence) % 3 == 0:
-                protein_sequence_translation = translate_codons(self.Feature_sequence)
-        except: pass
+        if fresh or '__details__' not in self.__dict__:
 
-        return dict(
-                name = self.Feature_name,
-                hash = self.MD5_hash,
-                type = self.Feature_type,
-                sequence = self.Feature_sequence,
-                protein_sequence = protein_sequence_translation,
-                description = self.description,
-                color = color,
-        )
+            color = tsession.query(Feature_Type).filter(Feature_Type.Feature_type == self.Feature_type).one().color
+
+            protein_sequence_translation = None
+            try:
+                if len(self.Feature_sequence) % 3 == 0:
+                    protein_sequence_translation = translate_codons(self.Feature_sequence)
+            except: pass
+
+            self.__dict__['__details__'] = dict(
+                    name = self.Feature_name,
+                    hash = self.MD5_hash,
+                    type = self.Feature_type,
+                    sequence = self.Feature_sequence,
+                    protein_sequence = protein_sequence_translation,
+                    description = self.description,
+                    color = color,
+            )
+
+        return self.__dict__['__details__']
 
 
 class Feature_Type(DeclarativeBasePlasmid):
@@ -956,13 +976,14 @@ class Plasmid_Feature(DeclarativeBasePlasmid):
     plasmid = relationship('Plasmid', viewonly = True, primaryjoin = 'and_(Plasmid.creator == Plasmid_Feature.creator, Plasmid.creator_entry_number == Plasmid_Feature.creator_entry_number)')
 
 
-    def get_details(self, tsession):
+    def get_details(self, tsession, engine):
         '''Returns details about a feature.'''
-        feature_details = self.feature.get_details(tsession)
+        feature_details = self.feature.get_details(tsession, engine)
         plasmid_sequence = self.plasmid.sequence.upper().strip()
         feature_sequence = self.feature.Feature_sequence.upper().strip()
         feature_type = self.feature.ftype
         indices = []
+        feature_details['indices'] = indices
 
         for instance in re.finditer(feature_sequence, plasmid_sequence):
             if self.feature.Feature_type == 'Restrxn Type II':
@@ -1052,7 +1073,7 @@ class Plasmid_File(DeclarativeBasePlasmid):
     File = Column(LONGBLOB(), nullable=False)
 
 
-    def get_details(self, tsession):
+    def get_details(self, tsession, engine):
         '''Returns meta-data about a file.'''
 
         # todo: For readability, I should really be defining relationships above and using them here
