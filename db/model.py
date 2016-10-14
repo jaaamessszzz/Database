@@ -284,7 +284,7 @@ class Plasmid(DeclarativeBasePlasmid):
     creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
     creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     plasmid_name = Column(Unicode(100, collation="utf8_bin"), nullable=True, unique=True)
-    plasmid_type = Column(Enum('part', 'cassette', 'multicassette', 'other'), nullable=False)
+    plasmid_type = Column(Enum('part', 'cassette', 'multicassette', 'other', 'template', 'design'), nullable=False)
     location = Column(Unicode(250, collation="utf8_bin"), nullable=False)
     description = Column(Text(collation="utf8_bin"), nullable=False)
     sequence = Column(Text(), nullable=False)
@@ -315,8 +315,12 @@ class Plasmid(DeclarativeBasePlasmid):
         return u'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
-    def get_details(self, tsession, only_basic_details = False):
-        '''.'''
+    ###############################
+    # Generic plasmid properties
+    ###############################
+
+
+    def _get_details_basic(self):
         d = row_to_dict(self)
 
         # Store the generated ID
@@ -325,139 +329,207 @@ class Plasmid(DeclarativeBasePlasmid):
         # Add a list to inform the user about errors or inconsistencies in the records
         d['errors'] = []
 
+        # Used for part type-specific properties
+        d['details'] = {}
+
+        # Used by the website for longer descriptions e.g. "Part 3, 4"
+        d['printed_plasmid_type'] = d['plasmid_type'].title()
+
         # Rename plasmid_name to match the Primers table
         d['secondary_id'] = d['plasmid_name']
         del d['plasmid_name']
-
-        # Retrieve the list of associated files
-        d['files'] = []
-        if not only_basic_details:
-            plasmid_files = tsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == self.creator, Plasmid_File.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_File.file_name)
-            if plasmid_files.count() > 0:
-                for pf in plasmid_files:
-                    d['files'].append(pf.get_details(tsession))
-
-        # Retrieve the list of associated publications
-        d['publications'] = []
-        if not only_basic_details:
-            for pub in self.publications:
-                intersection_record = tsession.query(Publication_Plasmid).filter(and_(
-                        Publication_Plasmid.creator == self.creator,
-                        Publication_Plasmid.creator_entry_number == self.creator_entry_number,
-                        Publication_Plasmid.PublicationID == pub.ID,
-                        Publication_Plasmid.Deprecated == 0))
-                if intersection_record:
-                    intersection_record = intersection_record.one()
-                    description = intersection_record.Description
-                    pubd = pub.get_details()
-                    pubd['description'] = description
-                    d['publications'].append(pubd)
-
-        # Retrieve the list of associated primers
-        d['primers'] = []
-        if not only_basic_details:
-            for prmr in self.primers:
-                d['primers'].append(prmr.to_dict())
-
-        # Retrieve the list of associated features
-        d['features'] = []
-        if not only_basic_details:
-            plasmid_features = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == self.creator, Plasmid_Feature.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_Feature.feature_name)
-            if plasmid_features.count() > 0:
-                for pf in plasmid_features:
-                    d['features'].append(pf.get_details(tsession))
+        return d
 
 
-        # todo: add all relevant information to part index list (only name and indicies so far)
-        part_indices_list = None
-        if self.plasmid_type.lower() == 'cassette' and not only_basic_details:
+    ###############################
+    # Detailed plasmid properties
+    ###############################
 
-            part_indices_list = []
-            # List of [part_name, (starting_index, ending_index)]
 
-            cassette_parts = tsession.query(Cassette_Assembly, Plasmid) \
-                .filter(and_(self.creator == Cassette_Assembly.Cassette_creator,
-                             self.creator_entry_number == Cassette_Assembly.Cassette_creator_entry_number,
-                             Plasmid.creator == Cassette_Assembly.Part_creator,
-                             Plasmid.creator_entry_number == Cassette_Assembly.Part_creator_entry_number))
+    def _get_details_files(self, tsession, d):
+        d = d or self._get_details_basic()
+        plasmid_files = tsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == self.creator, Plasmid_File.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_File.file_name)
+        if plasmid_files.count() > 0:
+            for pf in plasmid_files:
+                d['files'].append(pf.get_details(tsession))
 
-            #print('*!' * 100)
-            #print(cassette_parts)
-            for cassette_assembly, cassette_part_plasmid in cassette_parts:
-                # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
-                part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
-                if len(part_sequence) == 1:
-                    part_sequence = part_sequence[0][4:-4]
-                    for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
-                        part_indices_list.append(dict(
+
+    def _get_details_publications(self, tsession, d):
+        d = d or self._get_details_basic()
+        for pub in self.publications:
+            intersection_record = tsession.query(Publication_Plasmid).filter(and_(
+                    Publication_Plasmid.creator == self.creator,
+                    Publication_Plasmid.creator_entry_number == self.creator_entry_number,
+                    Publication_Plasmid.PublicationID == pub.ID,
+                    Publication_Plasmid.Deprecated == 0))
+            if intersection_record:
+                intersection_record = intersection_record.one()
+                description = intersection_record.Description
+                pubd = pub.get_details()
+                pubd['description'] = description
+                d['publications'].append(pubd)
+
+
+    def _get_details_primers(self, tsession, d):
+        d = d or self._get_details_basic()
+        for prmr in self.primers:
+            d['primers'].append(prmr.to_dict())
+
+
+    def _get_details_features(self, tsession, d):
+        d = d or self._get_details_basic()
+        plasmid_features = tsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == self.creator, Plasmid_Feature.creator_entry_number == self.creator_entry_number)).order_by(Plasmid_Feature.feature_name)
+        if plasmid_features.count() > 0:
+            for pf in plasmid_features:
+                d['features'].append(pf.get_details(tsession))
+
+
+    def _get_details_part_indices_list(self, tsession, d, only_basic_details = False):
+        '''Retrieve a List of dicts with [part_name, part_number, starting_index, ending_index].'''
+
+        d = d or self._get_details_basic()
+        cassette_parts = tsession.query(Cassette_Assembly, Plasmid) \
+            .filter(and_(self.creator == Cassette_Assembly.Cassette_creator,
+                         self.creator_entry_number == Cassette_Assembly.Cassette_creator_entry_number,
+                         Plasmid.creator == Cassette_Assembly.Part_creator,
+                         Plasmid.creator_entry_number == Cassette_Assembly.Part_creator_entry_number))
+
+        # print('*!' * 100)
+        # print(cassette_parts)
+        for cassette_assembly, cassette_part_plasmid in cassette_parts:
+            # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
+            part_sequence, part_types = self.fetch_cassette_parts(tsession, [
+                (cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
+            if len(part_sequence) == 1:
+                part_sequence = part_sequence[0][4:-4]
+                for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
+                    d['part_indices'].append(dict(
                             name = cassette_part_plasmid.description,
                             part_number = ', '.join(part_types),
                             start = instance.start(),
                             end = instance.end(),
-                        ))
+                    ))
 
-        d['part_indices'] = part_indices_list
 
-        # Retrieve the list of plasmid type-specific details
-        d['details'] = None
-        d['printed_plasmid_type'] = d['plasmid_type'].title() # used by the website for longer descriptions e.g. "Part 3, 4"
-        part_numbers = None
+    ##################################
+    # Plasmid type-specific properties
+    ##################################
 
-        if self.plasmid_type == 'other':
-            resistance, vector = None, None
+
+    def _get_cassette_plasmid_details(self, tsession, d, only_basic_details = False):
+
+        d = d or self._get_details_basic()
+        assert (self.plasmid_type == 'cassette')
+
+        assert ('part_plasmids' not in d)
+        d['part_plasmids'] = []
+        if not only_basic_details:
             try:
-                resistance = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
-            except:
-                d['errors'].append('This plasmid is missing am Other_Plasmid record so the resistance is unknown.')
-            try:
-                vector = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().vector or None
-            except:
-                # Storing the vector ID is optional
-                pass
-            d['details'] = dict(
-                resistance = resistance,
-                vector = vector,
-            )
-        elif self.plasmid_type == 'part':
-            resistance, part_number = None, None
-            try:
-                resistance = tsession.query(Part_Plasmid).filter(and_(Part_Plasmid.creator == self.creator, Part_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
-            except:
-                d['errors'].append('This part plasmid is missing a Part_Plasmid record so the resistance is unknown.')
-            try:
-                plasmid_parts = tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number))
-                part_numbers = sorted([r.part_number for r in plasmid_parts])
+                parts_read = {}
+                part_plasmids = tsession.query(Cassette_Assembly).filter(
+                    and_(Cassette_Assembly.Cassette_creator == self.creator,
+                         Cassette_Assembly.Cassette_creator_entry_number == self.creator_entry_number)).order_by(
+                    Cassette_Assembly.Part_number)
+                for pp in part_plasmids:
+                    pp_id = (pp.Part_creator, pp.Part_creator_entry_number)
+                    if pp_id not in parts_read:
+                        parts_read[pp_id] = True
+                        assert (pp.Part_number not in d['part_plasmids'])
+                        part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator,
+                                                                                  Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
+                        assert (part_plasmid_record.plasmid_type == 'part')
+                        d['part_plasmids'].append(part_plasmid_record.get_details(tsession))
             except Exception, e:
                 colortext.warning(str(e))
                 colortext.warning(traceback.format_exc())
-                d['errors'].append('This part plasmid is missing a Part_Plasmid_Part record so the part number is unknown.')
+                d['errors'].append('An error occurred retrieving data for this cassette assembly.')
 
-            d['printed_plasmid_type'] = '{0} {1}'.format(self.plasmid_type.title(), ', '.join(part_numbers))
-            d['details'] = dict(
-                resistance = resistance,
-                part_numbers = part_numbers,
-            )
-        elif self.plasmid_type == 'cassette':
-            assert ('part_plasmids' not in d)
-            d['part_plasmids'] = []
+
+    def _get_other_plasmid_details(self, tsession, d, only_basic_details = False):
+
+        d = d or self._get_details_basic()
+        assert(self.plasmid_type == 'other')
+
+        resistance, vector = None, None
+        try:
+            resistance = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
+        except:
+            d['errors'].append('This plasmid is missing am Other_Plasmid record so the resistance is unknown.')
+        try:
+            vector = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().vector or None
+        except:
+            # Storing the vector ID is optional
+            pass
+        d['details'] = dict(resistance = resistance, vector = vector)
+
+
+    def _get_part_plasmid_details(self, tsession, d, only_basic_details = False):
+
+        d = d or self._get_details_basic()
+        assert (self.plasmid_type == 'part')
+
+        part_numbers = None
+        resistance, part_number = None, None
+        try:
+            resistance = tsession.query(Part_Plasmid).filter(and_(Part_Plasmid.creator == self.creator, Part_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
+        except:
+            d['errors'].append('This part plasmid is missing a Part_Plasmid record so the resistance is unknown.')
+        try:
+            plasmid_parts = tsession.query(Part_Plasmid_Part).filter(and_(Part_Plasmid_Part.creator == self.creator, Part_Plasmid_Part.creator_entry_number == self.creator_entry_number))
+            part_numbers = sorted([r.part_number for r in plasmid_parts])
+        except Exception, e:
+            colortext.warning(str(e))
+            colortext.warning(traceback.format_exc())
+            d['errors'].append('This part plasmid is missing a Part_Plasmid_Part record so the part number is unknown.')
+
+        d['printed_plasmid_type'] = '{0} {1}'.format(self.plasmid_type.title(), ', '.join(part_numbers))
+        d['details'] = dict(
+            resistance = resistance,
+            part_numbers = part_numbers,
+        )
+
+
+    ##################################
+    # Main get_details function
+    ##################################
+
+
+    def get_details(self, tsession, only_basic_details = False):
+        '''.'''
+
+        d = self._get_details_basic()
+
+        # Fill in optional details
+        detail_functions = dict(
+            all = dict(
+                files = self._get_details_files,               # Retrieve the list of associated files
+                publications = self._get_details_publications, # Retrieve the list of associated publications
+                primers = self._get_details_primers,           # Retrieve the list of associated primers
+                features = self._get_details_features,         # Retrieve the list of associated features
+            ),
+            cassette = dict(
+                part_indices = self._get_details_part_indices_list,  # todo: add all relevant information to part index list (only name and indicies so far)
+                details = self._get_cassette_plasmid_details,
+            ),
+            other = dict(
+                details = self._get_other_plasmid_details,
+            ),
+            part = dict(
+                details = self._get_part_plasmid_details,
+            ),
+        )
+
+        # Fill in generic optional details
+        for detail_type, f in sorted(detail_functions['all'].iteritems()):
+            d[detail_type] = []
             if not only_basic_details:
-                try:
-                    parts_read = {}
-                    part_plasmids = tsession.query(Cassette_Assembly).filter(and_(Cassette_Assembly.Cassette_creator == self.creator, Cassette_Assembly.Cassette_creator_entry_number == self.creator_entry_number)).order_by(Cassette_Assembly.Part_number)
-                    for pp in part_plasmids:
-                        pp_id = (pp.Part_creator, pp.Part_creator_entry_number)
-                        if pp_id not in parts_read:
-                            parts_read[pp_id] = True
-                            assert(pp.Part_number not in d['part_plasmids'])
-                            part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
-                            assert(part_plasmid_record.plasmid_type == 'part')
-                            d['part_plasmids'].append(part_plasmid_record.get_details(tsession))
-                except Exception, e:
-                    colortext.warning(str(e))
-                    colortext.warning(traceback.format_exc())
-                    d['errors'].append('An error occurred retrieving data for this cassette assembly.')
+                f(tsession, d)
 
-        d['details'] = d['details'] or {}
+        # Fill in plasmid type-specific details
+        for detail_type, g in sorted(detail_functions.get(self.plasmid_type, {}).iteritems()):
+            d[detail_type] = []
+            if not only_basic_details:
+                g(tsession, d, only_basic_details)
 
         return d
 
