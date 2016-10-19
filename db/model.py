@@ -18,6 +18,8 @@ DeclarativeBasePlasmid = declarative_base()
 from klab import colortext
 from klab.bio.basics import translate_codons
 
+from procedures import call_procedure
+
 
 # todo: this should be moved into the klab repository e.g. klab/bio/dna.py
 class NotDNAException(Exception): pass
@@ -315,6 +317,14 @@ class Plasmid(DeclarativeBasePlasmid):
         return u'p{0}{1:04d}'.format(self.creator, self.creator_entry_number)
 
 
+    @classmethod
+    def get_plasmid_helper(cls, tsession, cache, creator, creator_entry_number):
+        if cache:
+            return cache.get_plasmid(creator, creator_entry_number)
+        else:
+            return tsession.query(cls).filter(and_(cls.creator == creator, cls.creator_entry_number == creator_entry_number)).one()
+
+
     ###############################
     # Generic plasmid properties
     ###############################
@@ -402,7 +412,9 @@ class Plasmid(DeclarativeBasePlasmid):
         # print(cassette_parts)
         for cassette_assembly, cassette_part_plasmid in cassette_parts:
             # Do the restriction digest with BsaI and get indices for start/end of part minus overhangs
-            part_sequence, part_types = self.fetch_cassette_parts(tsession, [(cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number)])
+            part_sequence, part_types = self.fetch_plasmid_parts(tsession, engine, cassette_part_plasmid.creator, cassette_part_plasmid.creator_entry_number, cache = cache, fresh = fresh)
+
+            # todo: write an explanation here
             if len(part_sequence) == 1:
                 part_sequence = part_sequence[0][4:-4]
                 for instance in re.finditer(part_sequence.upper().strip(), self.sequence):
@@ -440,7 +452,7 @@ class Plasmid(DeclarativeBasePlasmid):
                         assert (pp.Part_number not in d['part_plasmids'])
 
                         if cache:
-                            d['part_plasmids'].append(cache.get_plasmid(pp_id).get_details(tsession, engine, cache = cache))
+                            d['part_plasmids'].append(cache.get_plasmid(pp.Part_creator, pp.Part_creator_entry_number).get_details(tsession, engine, cache = cache))
                             assert(d['part_plasmids'][-1]['plasmid_type'] == 'part')
                         else:
                             part_plasmid_record = tsession.query(Plasmid).filter(and_(Plasmid.creator == pp.Part_creator, Plasmid.creator_entry_number == pp.Part_creator_entry_number)).one()
@@ -549,9 +561,88 @@ class Plasmid(DeclarativeBasePlasmid):
         return self.__dict__['__details__']
 
 
+    def fetch_plasmid_parts(self, tsession, engine, creator, creator_entry_number, cache = None, fresh = False):
+        '''
+
+        :param tsession:
+        :param engine:
+        :param input_plasmids ([creator, creator_entry_number]): The function accepts multiple input plasmids (Q: should it? maybe for gg assembly but not for get_details)
+        :return:
+        '''
+        # Get sequences and part numbers for listed part plasmids
+
+        restriction_enzyme = 'BsaI'
+        site_F = 'GGTCTC'
+        site_R = 'GAGACC'
+
+        # todo: use caching here
+        #if cache:
+        #    d['features'].append(cache.get_feature(pf.feature_name).get_details(tsession, engine, cache = cache))
+        #else:
+        #    d['features'].append(pf.get_details(tsession, engine))
+
+        # Retrieve the part plasmid record
+        part_plasmid = self.get_plasmid_helper(tsession, cache, creator, creator_entry_number)
+        assert(part_plasmid.plasmid_type == 'part')
+
+        # Return the list of parts in the plasmid
+        plasmid_parts = call_procedure(engine, 'getPartPlasmidParts', [creator, creator_entry_number], as_dict = True)
+
+        assert(len(plasmid_parts) > 0)
+        sequence = set([p['Plasmid_sequence_UC'] for p in plasmid_parts]) # these should all be the same - we could assert that
+        assert(len(sequence) == 1)
+        sequence = sequence.pop()
+        part_sequences = [sequence] # todo: change to only expect one sequence
+
+        part_types = [p['Part_Type_part_number'] for p in plasmid_parts]
+
+        if sequence.count(site_F) != 1:
+            raise Plasmid_Exception('There should be exactly one forward {0} site in {1} but {2} were found!' % (restriction_enzyme, part_plasmid.plasmid_name or part_plasmid.get_id(), sequence.count(site_F)))
+        if sequence.count(site_R) != 1:
+            raise Plasmid_Exception('There should be exactly one reverse {0} site in {1} but {2} were found!' % (restriction_enzyme, part_plasmid.plasmid_name or part_plasmid.get_id(), sequence.count(site_R)))
+
+        left_overhangs = set([p['Part_Type_overhang_5'] for p in plasmid_parts])
+        right_overhangs = set([p['Part_Type_overhang_3'] for p in plasmid_parts])
+
+        assert(len(left_overhangs) == len(right_overhangs))
+        leftoverhangs = left_overhangs.symmetric_difference(right_overhangs) # Leftover overhangs? Get it?
+
+        left_overhang, right_overhang = None, None
+        for p in plasmid_parts:
+            if p['Part_Type_overhang_5'] in leftoverhangs:
+                left_overhang = p['Part_Type_overhang_5']
+            if p['Part_Type_overhang_3'] in leftoverhangs:
+                right_overhang = p['Part_Type_overhang_3']
+
+        site_F_position = sequence.find(left_overhang, sequence.find(site_F))
+        site_R_position = sequence.find(right_overhang, sequence.find(site_R) - 10) + 4
+
+        # Circular permutation so that forward cut site is always upstream of reverse cut site in linear sequence
+        if site_F_position > site_R_position:
+            sequence = sequence[site_R_position + 8:] + sequence[:site_R_position + 8]
+
+        new_part_sequence = sequence[sequence.find(left_overhang, sequence.find(site_F)):sequence.find(right_overhang,sequence.find(site_R) - 10) + 4]
+        if new_part_sequence not in part_sequences:
+            part_sequences.append(new_part_sequence)
+
+        return part_sequences, part_types
+
+
 
     def fetch_cassette_parts(self, tsession, input_sequences, table_info=None):
-        # Get sequences and part numbers for listed part plasmids
+        '''
+        Get sequences and part numbers for listed part plasmids
+
+        todo: This is an old version of the function that I left here so as not to break the cassette assembly code.
+              It should be either merged with fetch_plasmid_parts or changed to take some of the speed-ups in that function
+              or maybe this code belongs in Plasmid_Utilities (there is already a version of it there so code drift is a
+              problem).
+
+        :param tsession:
+        :param input_sequences:
+        :param table_info:
+        :return:
+        '''
 
         part_IDs = [and_(Plasmid.creator == part_creator, Plasmid.creator_entry_number == part_creator_entry_number) for (part_creator, part_creator_entry_number) in input_sequences]
         part_plasmids_query = tsession.query(Plasmid, Part_Plasmid, Part_Plasmid_Part, Part_Type) \
@@ -635,7 +726,6 @@ class Plasmid(DeclarativeBasePlasmid):
             return table_info
         else:
             return part_sequences, part_types # todo: this is different from James's function
-
 
 
     @staticmethod
