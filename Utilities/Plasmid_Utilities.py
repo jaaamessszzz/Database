@@ -189,7 +189,7 @@ class Plasmid_Utilities(object):
                     # '2a' : ['', ''],
                     #  '2b' : ['', ''],
                     '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'taaATCCtGAGACCtGAGACGgcat'],
-                    '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGCTTCTtGAGACCtGAGACGgcat'],
+                    '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGTTCTtGAGACCtGAGACGgcat'],
                     '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'taaATCCtGAGACCtGAGACGgcat'],
                     '4': ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
                     # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
