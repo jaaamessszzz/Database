@@ -36,12 +36,12 @@ class Plasmid_Utilities(object):
     * Upload assembled plasmids to the database (part and cassette plasmids implemented)
     * Storing information for mutations and libraries
     * Generate mutant sequences for plasmid features and associated .ape file
+    * Multicassette assembly and submission
 
     ###########################
     # Planned Funtionality:   #
     ###########################
 
-    * Multicassette assembly and submission
     * Annotating working and archive locations for all plasmids
 
     '''
@@ -127,9 +127,8 @@ class Plasmid_Utilities(object):
 
             if any(input_type == part_type for input_type in ['3', '3a']):
                 # Checks that input sequence does not start with MET
-                # todo: Remove constraint on MET, add warning instead
+                # Update: removed constraint on MET, added warning instead
                 if input_sequences[0][:3].upper() == 'ATG':
-                    # Do we need to raise? Or can we just remove the start codon for the user and inform them?
                     print ('WARNING: The start codon is already in the part plasmid sequence, you do not need to include a MET start codon.')
 
                 # Checks that stop codons are not in the input coding sequence
@@ -552,12 +551,19 @@ class Plasmid_Utilities(object):
         for site in possible_features:
             target = site[2].upper()
             if current_plasmid_entry.sequence.upper().find(target) != -1 or current_plasmid_entry.sequence.upper().find(self.reverse_complement(target)) != -1:
-
-                input_dict = {'creator' : current_plasmid_entry.creator,
-                              'creator_entry_number' : current_plasmid_entry.creator_entry_number,
-                              'feature_name' : site[0]
-                              }
-                Plasmid_Feature.add(self.tsession, input_dict)
+                if site[1] == 'Restrxn Type II':
+                    if current_plasmid_entry.plasmid_type in ['part', 'cassette', 'multicassette']:
+                        input_dict = {'creator': current_plasmid_entry.creator,
+                                      'creator_entry_number': current_plasmid_entry.creator_entry_number,
+                                      'feature_name': site[0]
+                                      }
+                        Plasmid_Feature.add(self.tsession, input_dict)
+                else:
+                    input_dict = {'creator' : current_plasmid_entry.creator,
+                                  'creator_entry_number' : current_plasmid_entry.creator_entry_number,
+                                  'feature_name' : site[0]
+                                  }
+                    Plasmid_Feature.add(self.tsession, input_dict)
 
 
     def upload_file(self, current_plasmid_entry):
@@ -996,10 +1002,52 @@ class Plasmid_Utilities(object):
                         dsession.rollback()
                         dsession.close()
 
+            elif target_query.plasmid_type == 'template':
+                try:
+                    dsession = self.dbi.get_session()
+                    dsession.query(Plasmid_Feature_Design).filter(and_(Plasmid_Feature_Design.parent_creator == target[0],Plasmid_Feature_Design.parent_creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0],Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0],Plasmid_File.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.commit()
+                    dsession.close()
+                    print '***p{0}{1:04d} DELETED***'.format(target[0], target[1])
+                except Exception, e:
+                    import traceback
+
+                    print('Failure')
+                    print(str(e))
+                    print(traceback.format_exc())
+
+                    if dsession:
+                        dsession.rollback()
+                        dsession.close()
+
+            elif target_query.plasmid_type == 'design':
+                try:
+                    dsession = self.dbi.get_session()
+                    dsession.query(Plasmid_Feature_Design).filter(and_(Plasmid_Feature_Design.child_creator == target[0],Plasmid_Feature_Design.child_creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0],Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0],Plasmid_File.creator_entry_number == target[1])).delete()
+                    dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
+                    dsession.commit()
+                    dsession.close()
+                    print '***p{0}{1:04d} DELETED***'.format(target[0], target[1])
+                except Exception, e:
+                    import traceback
+
+                    print('Failure')
+                    print(str(e))
+                    print(traceback.format_exc())
+
+                    if dsession:
+                        dsession.rollback()
+                        dsession.close()
+
             else:
                 raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
 
-    def design_feature(self, design_list, design_ID, design_description):
+    def design_feature(self, design_list, design_ID, design_description, design_location):
         """
         This function will allow users to replace features in annotated template plasmids with their own designs
         :param design_list: list of dicts with keys['feature_ID', 'design_sequence'] to produce a new plasmid
@@ -1007,11 +1055,9 @@ class Plasmid_Utilities(object):
         :param design_sequence: Sequence of the designed feature
         :param design_ID: Essentially the User ID for this designed plasmid
         :param design_description: Description for the designed plasmid
+        :param design_location: Design location...
         :return:
         """
-
-        import pprint
-        pprint.pprint(design_list)
 
         WT_set = self.tsession.query(Plasmid_Feature, Feature, Plasmid).filter(
             and_(Plasmid_Feature.feature_name == Feature.Feature_name,
@@ -1022,7 +1068,6 @@ class Plasmid_Utilities(object):
         plasmid_query_list = [WT_set.filter(Plasmid_Feature.ID == design['feature_ID']).one() for design in design_list]
 
         parent_plasmid_set = set([(feature_source.Plasmid.creator, feature_source.Plasmid.creator_entry_number) for feature_source in plasmid_query_list])
-        print parent_plasmid_set
 
         if len(parent_plasmid_set) != 1:
             raise Plasmid_Exception('All target features need to be from the same Plasmid!')
@@ -1059,14 +1104,13 @@ class Plasmid_Utilities(object):
         plasmid_input_dict = {'creator': self.user_ID,
                               'plasmid_name': design_ID,
                               'plasmid_type': 'design',
-                              'location': 'BUFU',
+                              'location': design_location,
                               'description': design_description,
                               'sequence': final_designed_sequence,
                               'status': 'designed'
                               }
 
         design_Plasmid_entry = Plasmid.add(self.tsession, plasmid_input_dict)
-        print design_Plasmid_entry
 
         for feature_design in design_list:
             feature_design_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
