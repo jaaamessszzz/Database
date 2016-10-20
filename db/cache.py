@@ -1,3 +1,5 @@
+import traceback
+
 from sqlalchemy.sql import func, desc, join
 from sqlalchemy import and_, or_, func
 
@@ -27,6 +29,18 @@ class Cache(object):
             self.features[f.Feature_name] = f
 
 
+    def load_plasmid(creator, creator_entry_number, tsession = None, engine = None):
+        engine = engine or self.engine
+        tsession = tsession or self.tsession
+
+        if k not in self.plasmids:
+            k = (creator, creator_entry_number)
+            p = tsession.query(Plasmid).filter(Plasmid.creator == creator, Plasmid.creator_entry_number == creator_entry_number).one()
+            self.plasmid_order.append(k)
+            self.plasmids[k] = p
+        return self.plasmids[k]
+
+
     def load_plasmids(self, tsession = None, engine = None):
 
         engine = engine or self.engine
@@ -50,11 +64,23 @@ class Cache(object):
         except: raise CacheMissException()
 
 
-    def get_plasmid(self, k):
-        try: return self.plasmids[k]
-        except: raise CacheMissException()
+    def get_plasmid(self, creator, creator_entry_number, tsession = None, engine = None):
+        try:
+            return self.plasmids[(creator, creator_entry_number)]
+        except Exception, e:
+            pass
+            #print(str(e))
+            #print(traceback.format_exc())
+
+            try:
+                return self.load_plasmid(creator, creator_entry_number, tsession = tsession, engine = engine)
+            except Exception, e:
+                print(str(e))
+                print(traceback.format_exc())
+                raise CacheMissException()
 
 
     def get_plasmid_tpl(self, creator, creator_entry_number):
         try: return self.plasmids[(creator, creator_entry_number)]
         except: raise CacheMissException()
+
