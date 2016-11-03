@@ -473,17 +473,31 @@ class Plasmid(DeclarativeBasePlasmid):
         d = d or self._get_details_basic()
         assert(self.plasmid_type == 'other')
 
-        resistance, vector = None, None
+        sub_record, resistance, vector = None, None, None
         try:
-            resistance = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().resistance
+            sub_record = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one()
         except:
             d['errors'].append('This plasmid is missing am Other_Plasmid record so the resistance is unknown.')
-        try:
-            vector = tsession.query(Other_Plasmid).filter(and_(Other_Plasmid.creator == self.creator, Other_Plasmid.creator_entry_number == self.creator_entry_number)).one().vector or None
-        except:
+        if sub_record:
             # Storing the vector ID is optional
-            pass
+            resistance, vector = sub_record.resistance, sub_record.vector or None
         d['details'] = dict(resistance = resistance, vector = vector)
+
+
+    def _get_design_plasmid_details(self, tsession, engine, d, cache = None, fresh = False, only_basic_details = False):
+
+        d = d or self._get_details_basic()
+        assert(self.plasmid_type == 'design')
+
+        sub_record, resistance, vector, is_template = None, None, None, None
+        try:
+            sub_record = tsession.query(Design_Plasmid).filter(and_(Design_Plasmid.creator == self.creator, Design_Plasmid.creator_entry_number == self.creator_entry_number)).one()
+        except:
+            d['errors'].append('This plasmid is missing a Design_Plasmid record so the resistance, vector, and template status are unknown.')
+        if sub_record:
+            # Storing the vector ID is optional
+            resistance, vector, is_template = sub_record.resistance, sub_record.vector or None, sub_record.is_template
+        d['details'] = dict(resistance = resistance, vector = vector, is_template = is_template)
 
 
     def _get_part_plasmid_details(self, tsession, engine, d, cache = None, fresh = False, only_basic_details = False):
@@ -541,6 +555,9 @@ class Plasmid(DeclarativeBasePlasmid):
                 ),
                 part = dict(
                     details = self._get_part_plasmid_details,
+                ),
+                design = dict(
+                    details = self._get_design_plasmid_details,
                 ),
             )
 
@@ -962,6 +979,50 @@ class Other_Plasmid(DeclarativeBasePlasmid):
         d = row_to_dict(self)
         d.update(row_to_dict(self.plasmid))
         d['__id__'] = self.plasmid.get_id() # this is easier to work with for the website hashtables
+        return d
+
+
+    def __repr__(self):
+        return 'Internal numbering: {0} {1}'.format(self.creator, self.creator_entry_number)
+
+
+class Design_Plasmid(DeclarativeBasePlasmid):
+    __tablename__ = 'Design_Plasmid'
+
+    _required_fields = ['creator', 'creator_entry_number', 'resistance']
+
+    creator_entry_number = Column(Integer, ForeignKey('Plasmid.creator_entry_number'), nullable = False, primary_key = True)
+    creator = Column(Unicode(5), ForeignKey('Plasmid.creator'), nullable = False, primary_key = True)
+    resistance = Column(Unicode(100, collation = "utf8_bin"), nullable = False)
+    vector = Column(Unicode(32, collation = "utf8_bin"), nullable = True)
+    is_template = Column(TINYINT(1), default = 0, nullable = False)
+
+    plasmid = relationship('Plasmid', primaryjoin = 'and_(Plasmid.creator == Design_Plasmid.creator, Plasmid.creator_entry_number == Design_Plasmid.creator_entry_number)')
+
+
+    @staticmethod
+    def add(tsession, input_dict, silent = True):
+        try:
+            db_record_object = Design_Plasmid(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
+
+
+    def to_dict(self):
+        '''This function is used by the web interface.'''
+        d = row_to_dict(self)
+        d.update(row_to_dict(self.plasmid))
+        d['__id__'] = self.plasmid.get_id()  # this is easier to work with for the website hashtables
         return d
 
 
