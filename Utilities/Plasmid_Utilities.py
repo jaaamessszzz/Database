@@ -14,11 +14,12 @@ sys.path.insert(0, '..')
 try:
     from db.interface import DatabaseInterface
     from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design
+    from db.procedures import call_procedure
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
     from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design
-
+    from db.procedures import call_procedure
 class Plasmid_Exception(Exception): pass
 
 class Plasmid_Utilities(object):
@@ -1133,7 +1134,7 @@ class Plasmid_Utilities(object):
 
         print design_Plasmid_entry
 
-    def return_designable_features(self, database_ID_tuple):
+    def return_designable_features(self, engine, creator, creator_entry_number):
         """
         Returns a list of designable features for a given plasmid
 
@@ -1147,10 +1148,8 @@ class Plasmid_Utilities(object):
 
         """
 
-        designable_plasmid_features_query = self.tsession.query(Plasmid_Feature, Feature, Feature_Type).filter(and_(Plasmid_Feature.creator == database_ID_tuple[0],
-                                                                                                                    Plasmid_Feature.creator_entry_number == database_ID_tuple[1],
-                                                                                                                    Plasmid_Feature.feature_name == Feature.Feature_name,
-                                                                                                                    Feature.Feature_type == Feature_Type.Feature_type,
-                                                                                                                    Feature_Type.designable == 1)
-                                                                                                 )
+        designable_plasmid_features_query = call_procedure(engine, 'select_designable_features', [creator, creator_entry_number], as_dict = False)
+
+        print designable_plasmid_features_query
+
         return [{'feature_ID': plasmid_feature.ID, 'WT_sequence': feature.Feature_sequence} for plasmid_feature, feature, feature_type in designable_plasmid_features_query]
