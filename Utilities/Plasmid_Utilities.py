@@ -1133,3 +1133,24 @@ class Plasmid_Utilities(object):
 
         print design_Plasmid_entry
 
+    def return_designable_features(self, database_ID_tuple):
+        """
+        Returns a list of designable features for a given plasmid
+
+        Parameters
+        ----------
+        database_ID_tuple: tuple of (creator, creator_entry_number)
+
+        Returns
+        -------
+        List of designable features for a given plasmid
+
+        """
+
+        designable_plasmid_features_query = self.tsession.query(Plasmid_Feature, Feature, Feature_Type).filter(and_(Plasmid_Feature.creator == database_ID_tuple[0],
+                                                                                                                    Plasmid_Feature.creator_entry_number == database_ID_tuple[1],
+                                                                                                                    Plasmid_Feature.feature_name == Feature.Feature_name,
+                                                                                                                    Feature.Feature_type == Feature_Type.Feature_type,
+                                                                                                                    Feature_Type.designable == 1)
+                                                                                                 )
+        return [{'feature_ID': plasmid_feature.ID, 'WT_sequence': feature.Feature_sequence} for plasmid_feature, feature, feature_type in designable_plasmid_features_query]

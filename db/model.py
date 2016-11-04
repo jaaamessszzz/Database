@@ -865,6 +865,7 @@ class Feature_Type(DeclarativeBasePlasmid):
 
     Feature_type = Column(Unicode(200, collation="utf8_bin"), nullable=False, primary_key=True)
     color = Column(Unicode(7, collation="utf8_bin"), nullable=False)
+    designable = Column(Integer, nullable=False)
 
 
 class Multicassette_Assembly(DeclarativeBasePlasmid):
