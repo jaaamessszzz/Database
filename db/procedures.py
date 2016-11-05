@@ -4,6 +4,7 @@ stored_procedure_column_names = dict(
         'Part_Plasmid_creator_entry_number', 'Part_Plasmid_creator', 'Part_Plasmid_resistance',
         'Part_Plasmid_Part_creator_entry_number', 'Part_Plasmid_Part_creator', 'Part_Plasmid_Part_part_number',
         'Part_Type_part_number', 'Part_Type_overhang_5', 'Part_Type_overhang_3'],
+    getDesignableFeatures = ['feature_ID', 'creator', 'creator_entry_number', 'feature_name', 'MD5_hash', 'sequence', 'description', 'feature_type', 'color'],
 )
 
 def call_procedure(engine, function_name, params, as_dict = False):

@@ -63,6 +63,11 @@ class Plasmid_Utilities(object):
         self.user_ID = self.tsession.query(Users).filter(Users.lab_username == self.username).one().ID
 
 
+    def __del__(self):
+        if self.tsession:
+            self.tsession.close()
+
+
     def reverse_complement(self, input_sequence):
         base_pair = {'A': 'T',
                      'T': 'A',
@@ -1134,22 +1139,15 @@ class Plasmid_Utilities(object):
 
         print design_Plasmid_entry
 
+
     def return_designable_features(self, engine, creator, creator_entry_number):
-        """
-        Returns a list of designable features for a given plasmid
+        '''
+        Returns a list of designable features for a given plasmid.
 
-        Parameters
-        ----------
-        database_ID_tuple: tuple of (creator, creator_entry_number)
+        :param engine: An SQLAlchemy engine object e.g. engine = dbi.get_engine()
+        :param creator: The UserID of the creator e.g. "JL"
+        :param creator_entry_number: The entry number of the plasmid in the user's namespace e.g. 1
+        :return: A list of dicts containing attributes of all designable features for the plasmid. Attributes include:  feature_ID, creator, creator_entry_number, feature_name, MD5_hash, sequence, description, feature_type, color.
+        '''
 
-        Returns
-        -------
-        List of designable features for a given plasmid
-
-        """
-
-        designable_plasmid_features_query = call_procedure(engine, 'select_designable_features', [creator, creator_entry_number], as_dict = False)
-
-        print designable_plasmid_features_query
-
-        return [{'feature_ID': plasmid_feature.ID, 'WT_sequence': feature.Feature_sequence} for plasmid_feature, feature, feature_type in designable_plasmid_features_query]
+        return call_procedure(engine, 'getDesignableFeatures', [creator, creator_entry_number], as_dict = True)
