@@ -1057,9 +1057,11 @@ class Plasmid_Utilities(object):
     def design_feature(self, design_list, design_ID, design_description, design_location):
         """
         This function will allow users to replace features in annotated template plasmids with their own designs
-        :param design_list: list of dicts with keys['feature_ID', 'design_sequence'] to produce a new plasmid where
-                            feature_ID: Feature ID found in Plasmid_Feature.ID
-                            design_sequence: Sequence of the designed feature
+        :param design_list: a list of dicts to produce a new plasmid where each dict has the following keys/values:
+                feature_ID: Feature ID found in Plasmid_Feature.ID
+                design_sequence: Sequence of the designed feature
+                design_name: Name of the designed feature
+                design_description: Description of the designed feature
         :param design_ID: Essentially the User ID for this designed plasmid
         :param design_description: Description for the designed plasmid
         :param design_location: Design location...
