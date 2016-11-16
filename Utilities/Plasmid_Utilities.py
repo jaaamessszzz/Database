@@ -896,6 +896,7 @@ class Plasmid_Utilities(object):
         self.tsession.commit()
         print 'Update Complete!'
 
+
     def nuke_plasmids(self, nuke_list):
         """
         Deletes plasmid entries from the database
@@ -1054,6 +1055,7 @@ class Plasmid_Utilities(object):
             else:
                 raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
 
+
     def design_feature(self, design_list, designed_plasmid_ID, designed_plasmid_description, designed_plasmid_location, tsession = None):
         """
         This function will allow users to replace features in annotated template plasmids with their own designs
@@ -1069,9 +1071,9 @@ class Plasmid_Utilities(object):
         """
 
         # The user should handle transaction controls on any session passed in
-        auto_commit = True
+        auto_commit = False
         if not tsession:
-            auto_commit = False
+            auto_commit = True
             tsession = self.tsession
 
         WT_set = tsession.query(Plasmid_Feature, Feature, Plasmid).filter(
