@@ -1054,7 +1054,7 @@ class Plasmid_Utilities(object):
             else:
                 raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
 
-    def design_feature(self, design_list, design_ID, design_description, design_location, tsession = None):
+    def design_feature(self, design_list, designed_plasmid_ID, designed_plasmid_description, designed_plasmid_location, tsession = None):
         """
         This function will allow users to replace features in annotated template plasmids with their own designs
         :param design_list: a list of dicts to produce a new plasmid where each dict has the following keys/values:
@@ -1116,11 +1116,12 @@ class Plasmid_Utilities(object):
         #todo: implement plasmid_checks()
         final_designed_sequence = design_intermediate
 
+        # Push design to the database
         plasmid_input_dict = {'creator': self.user_ID,
-                              'plasmid_name': design_ID,
+                              'plasmid_name': designed_plasmid_ID,
                               'plasmid_type': 'design',
-                              'location': design_location,
-                              'description': design_description,
+                              'location': designed_plasmid_location,
+                              'description': designed_plasmid_description,
                               'sequence': final_designed_sequence,
                               'status': 'designed'
                               }
@@ -1132,10 +1133,7 @@ class Plasmid_Utilities(object):
                                          'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
                                          'child_creator': design_Plasmid_entry.creator,
                                          'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
-                                         'feature_ID': feature_design['feature_ID'],
-                                         'design_sequence': feature_design['design_sequence'],
-                                         'design_name': feature_design['design_name'],
-                                         'design_description': feature_design['design_description']
+                                         'feature_ID': feature_design['feature_ID']
                                          }
 
             print feature_design_input_dict

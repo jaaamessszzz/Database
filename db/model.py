@@ -1457,9 +1457,6 @@ class Plasmid_Feature_Design(DeclarativeBasePlasmid):
     child_creator = Column(Unicode(5, collation="utf8_bin"), ForeignKey('Users.ID'), nullable=False, primary_key=True)
     child_creator_entry_number = Column(Integer, nullable=False, primary_key=True)
     feature_ID = Column(Integer, nullable=False, primary_key=True)
-    design_sequence = Column(Text(), nullable=False)
-    design_name = Column(Unicode(128, collation="utf8_bin"), nullable=False)
-    design_description = Column(Text(), nullable=True)
 
     @staticmethod
     def add(tsession, input_dict, silent=True):
