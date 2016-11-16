@@ -1448,6 +1448,7 @@ class PublicationAuthor(DeclarativeBasePlasmid):
     MiddleNames = Column(Unicode(64), nullable = True)
     Surname = Column(Unicode(64), nullable = True)
 
+
 class Plasmid_Feature_Design(DeclarativeBasePlasmid):
     __tablename__ = 'Plasmid_Feature_Design'
 

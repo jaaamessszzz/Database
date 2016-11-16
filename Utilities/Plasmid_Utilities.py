@@ -1054,7 +1054,7 @@ class Plasmid_Utilities(object):
             else:
                 raise Plasmid_Exception("Plasmid type not recognized... What kind of plasmid is this?!?!?!?!")
 
-    def design_feature(self, design_list, design_ID, design_description, design_location):
+    def design_feature(self, design_list, design_ID, design_description, design_location, tsession = None):
         """
         This function will allow users to replace features in annotated template plasmids with their own designs
         :param design_list: a list of dicts to produce a new plasmid where each dict has the following keys/values:
@@ -1068,7 +1068,13 @@ class Plasmid_Utilities(object):
         :return:
         """
 
-        WT_set = self.tsession.query(Plasmid_Feature, Feature, Plasmid).filter(
+        # The user should handle transaction controls on any session passed in
+        auto_commit = True
+        if not tsession:
+            auto_commit = False
+            tsession = self.tsession
+
+        WT_set = tsession.query(Plasmid_Feature, Feature, Plasmid).filter(
             and_(Plasmid_Feature.feature_name == Feature.Feature_name,
                  Plasmid.creator == Plasmid_Feature.creator,
                  Plasmid.creator_entry_number == Plasmid_Feature.creator_entry_number))
@@ -1119,7 +1125,7 @@ class Plasmid_Utilities(object):
                               'status': 'designed'
                               }
 
-        design_Plasmid_entry = Plasmid.add(self.tsession, plasmid_input_dict)
+        design_Plasmid_entry = Plasmid.add(tsession, plasmid_input_dict)
 
         for feature_design in design_list:
             feature_design_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
@@ -1134,12 +1140,14 @@ class Plasmid_Utilities(object):
 
             print feature_design_input_dict
 
-            feature_design_entry = Plasmid_Feature_Design.add(self.tsession, feature_design_input_dict)
+            feature_design_entry = Plasmid_Feature_Design.add(tsession, feature_design_input_dict)
             print feature_design_entry
 
-            self.tsession.commit()
+            if auto_commit:
+                tsession.commit()
 
         print design_Plasmid_entry
+        return design_Plasmid_entry
 
 
     def return_designable_features(self, engine, creator, creator_entry_number):
