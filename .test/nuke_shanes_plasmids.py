@@ -2,15 +2,10 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, '..')
 
-from Utilities.Plasmid_Utilities import Plasmid_Utilities
-from Utilities.Plasmid_View_Tools import Plasmid_View_Tools
-from db.interface import DatabaseInterface
-from db.model import Feature, Plasmid_File, Plasmid, Part_Plasmid_Part, CDS_Mutant_Constituent
-from sqlalchemy import and_
-
-import sys
-import pprint
 import traceback
+
+from Utilities.Plasmid_Utilities import Plasmid_Utilities
+from db.model import Plasmid
 
 def cincinnati_squish_em_all():
     '''Note: nuke_plasmids is a very dangerous function to call.'''
@@ -31,8 +26,5 @@ def cincinnati_squish_em_all():
 
 
 if __name__ == '__main__':
-    import sys
-    sys.path.insert(0, '..')
-
     cincinnati_squish_em_all()
 
