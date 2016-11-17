@@ -9,8 +9,6 @@ from db.model import Plasmid
 
 def cincinnati_squish_em_all():
     '''Note: nuke_plasmids is a very dangerous function to call.'''
-
-    # Create up the database session
     try:
         utilities = Plasmid_Utilities()
         baes = [(bae.creator, bae.creator_entry_number) for bae in utilities.tsession.query(Plasmid).filter(Plasmid.creator == u'PARP')]
