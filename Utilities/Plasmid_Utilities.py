@@ -13,12 +13,12 @@ sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
-    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid
     from db.procedures import call_procedure
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
-    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid
     from kprimers.db.procedures import call_procedure
 class Plasmid_Exception(Exception): pass
 
@@ -732,7 +732,7 @@ class Plasmid_Utilities(object):
                        'R' : ['CGT', 'CGC', 'CGG', 'CGA', 'AGA', 'AGG'],
                        'S' : ['AGC', 'TCT', 'TCC', 'TCG', 'AGT', 'TCA'],
                        'T' : ['ACC', 'ACA', 'ACG', 'ACU'],
-                       'V' : ['GTG', 'GTT' ,'GTC', 'GTA'],
+                       'V' : ['GTG', 'GTT','GTC', 'GTA'],
                        'W' : ['TGG'],
                        'Y' : ['TAT', 'TAC']
                        }
@@ -823,6 +823,9 @@ class Plasmid_Utilities(object):
                                                      mutations=Mutant_codon_list,
                                                      mutant_feature_tuple=mutant_feature_tuple)
 
+        with open('{0}_Mut.gb'.format(database_ID), 'w+b') as file:
+            file.write(mutant_genbank_file)
+
         return Mutant_plasmid_sequence, CDS_mutant_constituents, mutant_genbank_file
 
     def add_mutant_to_db(self, Plasmid_Feature_ID, CDS_mutant_constituents, auto_commit=False):
@@ -856,18 +859,32 @@ class Plasmid_Utilities(object):
 
     def fetch_mutant_from_db(self, user_query):
         mutant_info = self.tsession.query(CDS_Mutant, CDS_Mutant_Constituent, Plasmid_Feature, Plasmid).filter(
-            and_(CDS_Mutant.ID == CDS_Mutant_Constituent.ID,
-                 Plasmid_Feature.ID == CDS_Mutant.Plasmid_Feature_ID,
-                 Plasmid_Feature.creator == Plasmid.creator,
-                 Plasmid_Feature.creator_entry_number == Plasmid.creator_entry_number,
-                 CDS_Mutant.ID == user_query
-                 )
+            and_(
+                CDS_Mutant.ID == user_query,
+                CDS_Mutant.ID == CDS_Mutant_Constituent.ID,
+                Plasmid_Feature.ID == CDS_Mutant.Plasmid_Feature_ID,
+                Plasmid_Feature.creator == Plasmid.creator,
+                Plasmid_Feature.creator_entry_number == Plasmid.creator_entry_number
+            )
         )
+
+        # mutant_info = self.tsession.execute('''
+        #     SELECT CDS_Mutant.ID AS CDS_Mutant_ID, CDS_Mutant.Plasmid_Feature_ID AS CDS_Mutant_Plasmid_Feature_ID, CDS_Mutant.Mutant_ID AS CDS_Mutant_Mutant_ID, CDS_Mutant.creator AS CDS_Mutant_creator, CDS_Mutant.Description AS CDS_Mutant_Description, CDS_Mutant.date AS CDS_Mutant_date, CDS_Mutant_Constituent.ID AS CDS_Mutant_Constituent_ID, CDS_Mutant_Constituent.mutation AS CDS_Mutant_Constituent_mutation, CDS_Mutant_Constituent.position AS CDS_Mutant_Constituent_position, CDS_Mutant_Constituent.wt_AA AS CDS_Mutant_Constituent_wt_AA, CDS_Mutant_Constituent.mut_AA AS CDS_Mutant_Constituent_mut_AA,
+        #     CDS_Mutant_Constituent.Description AS CDS_Mutant_Constituent_Description, Plasmid_Feature.ID AS Plasmid_Feature_ID, Plasmid_Feature.creator AS Plasmid_Feature_creator, Plasmid_Feature.creator_entry_number AS Plasmid_Feature_creator_entry_number,
+        #     Plasmid_Feature.feature_name AS Plasmid_Feature_feature_name, Plasmid.creator AS Plasmid_creator, Plasmid.creator_entry_number AS Plasmid_creator_entry_number, Plasmid.plasmid_name AS Plasmid_plasmid_name, Plasmid.plasmid_type AS Plasmid_plasmid_type, Plasmid.location AS Plasmid_location,
+        #     Plasmid.description AS Plasmid_description, Plasmid.sequence AS Plasmid_sequence, Plasmid.status AS Plasmid_status, Plasmid.date AS Plasmid_date
+        #     FROM CDS_Mutant
+        #     INNER JOIN CDS_Mutant_Constituent ON CDS_Mutant.ID = CDS_Mutant_Constituent.ID
+        #     INNER JOIN Plasmid_Feature ON Plasmid_Feature.ID = CDS_Mutant.Plasmid_Feature_ID
+        #     INNER JOIN Plasmid ON Plasmid_Feature.creator = Plasmid.creator AND Plasmid_Feature.creator_entry_number = Plasmid.creator_entry_number
+        #     WHERE CDS_Mutant.ID = :user_query
+        #   ''', dict(user_query=user_query))
 
         # SELECT * FROM CDS_Mutant INNER JOIN CDS_Mutant_Constituent ON CDS_Mutant.ID == CDS_Mutant_Constituent.ID
 
         mutation_tuples = []
         for cds_mutant, cds_mutant_constituent, plasmid_feature, plasmid in mutant_info:
+            print cds_mutant_constituent.position
             Plasmid_Feature_ID = cds_mutant.Plasmid_Feature_ID
             mutation_tuples.append((cds_mutant_constituent.wt_AA, cds_mutant_constituent.position, cds_mutant_constituent.mut_AA))
             database_ID = plasmid.get_id()
@@ -1036,6 +1053,7 @@ class Plasmid_Utilities(object):
                     dsession = self.dbi.get_session()
                     dsession.query(Plasmid_Feature_Design).filter(and_(Plasmid_Feature_Design.child_creator == target[0],Plasmid_Feature_Design.child_creator_entry_number == target[1])).delete()
                     dsession.query(Plasmid_Feature).filter(and_(Plasmid_Feature.creator == target[0],Plasmid_Feature.creator_entry_number == target[1])).delete()
+                    dsession.query(Design_Plasmid).filter(and_(Design_Plasmid.creator == target[0],Design_Plasmid.creator_entry_number == target[1])).delete()
                     dsession.query(Plasmid_File).filter(and_(Plasmid_File.creator == target[0],Plasmid_File.creator_entry_number == target[1])).delete()
                     dsession.query(Plasmid).filter(and_(Plasmid.creator == target[0], Plasmid.creator_entry_number == target[1])).delete()
                     dsession.commit()
@@ -1115,21 +1133,53 @@ class Plasmid_Utilities(object):
                                                                                                   feature_query.Plasmid.creator,
                                                                                                   feature_query.Plasmid.creator_entry_number))
 
+            # todo: push to Features if the new designed feature does not exist, otherwise notify the user and use the already existing feature
+            # Add designed feature to Features if it does not exist. Otherwise notify the user and use the already existing feature.
+
+            all_features_query = tsession.query(Feature)
+            existing_features_check = set(feature.Feature_sequence.upper() for feature in all_features_query)
+            if feature_design['feature_design_sequence'].upper() in existing_features_check:
+                feature_already_exists = all_features_query.filter(Feature.Feature_sequence == feature_design['feature_design_sequence']).one()
+                print "Your designed feature \"{0}\" already exists in the Features database as \"{1}\"".format(feature_design['feature_design_name'], feature_already_exists.Feature_name)
+            else:
+                feature_input_dict = {'Feature_name': feature_design['feature_design_name'],
+                                      'Feature_type': feature_query.Feature.Feature_type,
+                                      'Feature_sequence': feature_design['feature_design_sequence'],
+                                      'description': feature_design['feature_design_sequence']}
+                Feature.add(tsession, feature_input_dict)
+
         #todo: implement plasmid_checks()
+
+        ################################
+        # Push things to the database
+        ################################
+
         final_designed_sequence = design_intermediate
 
-        # Push design to the database
+        # Push plasmid
         plasmid_input_dict = {'creator': self.user_ID,
                               'plasmid_name': designed_plasmid_ID,
-                              'plasmid_type': 'design',
+                              'plasmid_type': u'design',
                               'location': designed_plasmid_location,
                               'description': designed_plasmid_description,
                               'sequence': final_designed_sequence,
-                              'status': 'designed'
+                              'status': u'designed'
                               }
 
-        design_Plasmid_entry = Plasmid.add(tsession, plasmid_input_dict)
+        import pprint
+        pprint.pprint(plasmid_input_dict)
 
+        design_Plasmid_entry = Plasmid.add(tsession, plasmid_input_dict, silent=False)
+
+        #Push Design_Plasmid
+        #todo: figure out how to get resistance and vector information from existing database entries...
+        design_plasmid_input = {'creator_entry_number':design_Plasmid_entry.creator_entry_number,
+                                'creator': design_Plasmid_entry.creator,
+                                'resistance': u'KAN',
+                                'vector': u'TEST'}
+        design_plasmid_input = Design_Plasmid.add(tsession, design_plasmid_input, silent=False)
+
+        # Push Plasmid_Feature_Design
         for feature_design in design_list:
             feature_design_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
                                          'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
@@ -1138,15 +1188,13 @@ class Plasmid_Utilities(object):
                                          'feature_ID': feature_design['feature_ID']
                                          }
 
-            print feature_design_input_dict
+            feature_design_entry = Plasmid_Feature_Design.add(tsession, feature_design_input_dict, silent=False)
 
-            feature_design_entry = Plasmid_Feature_Design.add(tsession, feature_design_input_dict)
-            print feature_design_entry
+        self.add_features(design_Plasmid_entry)
 
-            if auto_commit:
-                tsession.commit()
+        if auto_commit:
+            tsession.commit()
 
-        print design_Plasmid_entry
         return design_Plasmid_entry
 
 
