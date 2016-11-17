@@ -1191,7 +1191,8 @@ class Plasmid_Utilities(object):
             feature_design_entry = Plasmid_Feature_Design.add(tsession, feature_design_input_dict, silent=False)
 
         self.add_features(design_Plasmid_entry)
-
+        # self.upload_file(design_Plasmid_entry)
+        
         if auto_commit:
             tsession.commit()
 
