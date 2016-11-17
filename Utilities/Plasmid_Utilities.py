@@ -59,7 +59,7 @@ class Plasmid_Utilities(object):
         # Get User ID
         self.username = username
         if not self.username:
-            self.username = os.getlogin() # The webserver cannot call this function so it must instead pass username in as an argument
+            self.username = u'' + os.getlogin() # The webserver cannot call this function so it must instead pass username in as an argument
         self.user_ID = self.tsession.query(Users).filter(Users.lab_username == self.username).one().ID
 
 
