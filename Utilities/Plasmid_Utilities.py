@@ -1061,12 +1061,12 @@ class Plasmid_Utilities(object):
         This function will allow users to replace features in annotated template plasmids with their own designs
         :param design_list: a list of dicts to produce a new plasmid where each dict has the following keys/values:
                 feature_ID: Feature ID found in Plasmid_Feature.ID
-                design_sequence: Sequence of the designed feature
-                design_name: Name of the designed feature
-                design_description: Description of the designed feature
-        :param design_ID: Essentially the User ID for this designed plasmid
-        :param design_description: Description for the designed plasmid
-        :param design_location: Design location...
+                feature_design_sequence: Sequence of the designed feature
+                feature_design_name: Name of the designed feature
+                feature_design_description: Description of the designed feature
+        :param designed_plasmid_ID: Essentially the User ID for this designed plasmid
+        :param designed_plasmid_description: Description for the designed plasmid
+        :param designed_plasmid_location: Design location...
         :return:
         """
 
@@ -1102,13 +1102,13 @@ class Plasmid_Utilities(object):
 
             if len([instance for instance in re.finditer(WT_feature.upper(), design_intermediate.upper())]) == 1:
                 for instance in re.finditer(WT_feature.upper(), design_intermediate.upper()):
-                    design_intermediate = design_intermediate[:instance.start()] + feature_design['design_sequence'].upper() + design_intermediate[instance.end():]
+                    design_intermediate = design_intermediate[:instance.start()] + feature_design['feature_design_sequence'].upper() + design_intermediate[instance.end():]
 
             elif len([instance for instance in re.finditer(WT_feature.upper(), design_intermediate.upper())]) > 1:
                 feature_indicies = [{'start': instance.start(), 'end': instance.end()} for instance in re.finditer(WT_feature.upper(), design_intermediate.upper())]
 
                 for feature_index in reversed(feature_indicies):
-                    design_intermediate = design_intermediate[:feature_index['start']] + feature_design['design_sequence'].upper() + design_intermediate[feature_index['end']:]
+                    design_intermediate = design_intermediate[:feature_index['start']] + feature_design['feature_design_sequence'].upper() + design_intermediate[feature_index['end']:]
 
             else:
                 raise Plasmid_Exception('An instance of {0} was not found in p{1}{2:04d}!'.format(feature_query.Plasmid_Feature.feature_name,
