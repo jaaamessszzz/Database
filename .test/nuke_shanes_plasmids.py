@@ -14,8 +14,7 @@ def cincinnati_squish_em_all():
         baes = [(bae.creator, bae.creator_entry_number) for bae in utilities.tsession.query(Plasmid).filter(Plasmid.creator == u'PARP')]
         for bae in baes:
             assert(bae[0] == 'PARP')
-        baes = [('PARP', 77)]
-        utilities.nuke_plasmids(baes)
+        #utilities.nuke_plasmids(baes)
         utilities.tsession.close()
     except Exception, e:
         if utilities and utilities.tsession:
