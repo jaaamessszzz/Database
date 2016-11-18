@@ -13,6 +13,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import inspect as sqlalchemy_inspect
 from sqlalchemy import and_, or_, func
+from sqlalchemy.orm import deferred
 DeclarativeBasePlasmid = declarative_base()
 
 from klab import colortext
@@ -1222,13 +1223,13 @@ class Plasmid_File(DeclarativeBasePlasmid):
     file_name = Column(Unicode(100, collation="utf8_bin"), nullable=False)
     file_type = Column(Unicode(100), nullable=False)
     Description = Column(Text(), nullable=False)
-    File = Column(LONGBLOB(), nullable=False)
-
+    File = deferred(Column(LONGBLOB, nullable = False))
 
     def get_details(self, tsession, engine):
         '''Returns meta-data about a file.'''
 
         # todo: For readability, I should really be defining relationships above and using them here
+        # todo: cache this data
         ft = tsession.query(File_Type).filter(File_Type.file_type == self.file_type).one()
         file_extension = ft.file_extension
         file_color = ft.color

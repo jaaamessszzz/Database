@@ -2,6 +2,7 @@ import traceback
 
 from sqlalchemy.sql import func, desc, join
 from sqlalchemy import and_, or_, func
+import time
 
 from model import *
 
@@ -10,14 +11,26 @@ class CacheMissException(Exception): pass
 class Cache(object):
 
 
-    def __init__(self, tsession, engine):
-
+    def __init__(self, tsession, engine, lifetime = 60):
+        # colortext.pcyan('FRESH CACHE')
         self.tsession = tsession
         self.engine = engine
 
         self.features = {}
         self.plasmids = {}
         self.plasmid_order = []
+        self.lifetime = lifetime
+        self.born = time.time()
+
+
+    def __del__(self):
+        try:
+            self.tsession.close()
+        except:
+            pass
+
+    def has_expired(self):
+        return (time.time() - self.born) > self.lifetime
 
 
     def load_features(self, tsession = None, engine = None):
