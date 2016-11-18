@@ -876,6 +876,23 @@ class Feature(DeclarativeBasePlasmid):
 
         return self.__dict__['__details__']
 
+    @staticmethod
+    def add(tsession, input_dict, silent=True):
+        try:
+            db_record_object = Feature(**input_dict)
+
+            if not silent:
+                colortext.pcyan('Adding this record:')
+                print(db_record_object)
+                print('')
+
+            tsession.add(db_record_object)
+            tsession.flush()
+
+            return db_record_object
+        except:
+            raise
+
 
 class Feature_Type(DeclarativeBasePlasmid):
     __tablename__ = 'Feature_Type'
