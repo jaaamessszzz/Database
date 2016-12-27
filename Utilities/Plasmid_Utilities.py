@@ -159,9 +159,6 @@ class Plasmid_Utilities(object):
         if assembly_type.lower() == 'multicassette':
             table_info = self.fetch_mulitcassette_cassettes(input_sequences, table_info)
 
-            import pprint
-            pprint.pprint(table_info)
-
             for part in table_info['Part list']:
                 if part[:4].upper() == 'CTGA':
                     intermediate = part.upper()
@@ -1165,9 +1162,6 @@ class Plasmid_Utilities(object):
                               'sequence': final_designed_sequence,
                               'status': u'designed'
                               }
-
-        import pprint
-        pprint.pprint(plasmid_input_dict)
 
         design_Plasmid_entry = Plasmid.add(tsession, plasmid_input_dict, silent=False)
 
