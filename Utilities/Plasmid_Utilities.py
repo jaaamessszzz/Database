@@ -1204,3 +1204,77 @@ class Plasmid_Utilities(object):
         '''
 
         return call_procedure(engine, 'getDesignableFeatures', [creator, creator_entry_number], as_dict = True)
+
+    def return_plasmid_resistance(self, creator, creator_entry_number):
+        """
+        Returns all resistances for a given plasmid as derived from the Plasmid_Features table
+
+        :param creator: creator
+        :param creator_entry_number: creator_entry_number
+        :return:
+        """
+        plasmid_resistances = self.tsession.execute("SELECT * FROM Feature INNER JOIN Plasmid_Feature on Feature.Feature_name = Plasmid_Feature.feature_name where Feature.Feature_type = 'Resistance' and Plasmid_Feature.creator = :creator_ and Plasmid_Feature.creator_entry_number = :creator_entry_number_",
+        {"creator_" : creator, "creator_entry_number_" : creator_entry_number})
+
+        plasmid_resistance_list = []
+
+        # All resistance features are of the form {RESISTANCE (Source)} e.g. {CARB (Kale)}
+        # Doing .split()[0] returns just the resistance name as it appears in the resistance table e.g. CARB
+        for plasmid_resistance in plasmid_resistances:
+            plasmid_resistance_list.append(dict(plasmid_resistance)['feature_name'].split()[0])
+
+        # List comprehension doesn't want to work for me for some reason...
+        # plasmid_resistance_list = [dict(plasmid_resistance)['feature_name'].split()[0] for plasmid_resistance in plasmid_resistances]
+
+        print sorted(plasmid_resistance_list)
+        return sorted(plasmid_resistance_list)
+
+    def add_new_user_defined_features(self, feature_dict_list):
+        """
+        This function will allow users to add new featurse to the Feature table given that they satisfy the following criteria:
+        1. New features cannot be a subset of an existing feature (MAKE SURE TO CHECK F AND R!)
+        2. New features cannot contain an existing feature
+        3. New features should be at least ~15bp long. This is an arbitrary cutoff, but shorter sequences have a greater
+           chance of popping up randomly and causing problems later down the road
+        4. Feature Names must be unique
+        5. I'll think of more stuff as this is written...
+        :param current_plasmid_entry: Current plasmid entry SQLAlchemy object
+        :return:
+        """
+        import re
+
+        # Get Feature information
+        database_features = self.tsession.query(Feature)
+
+        # Create lists of database features and sequences
+        database_feature_names = [database_feature.Feature_name.lower() for database_feature in database_features]
+        database_feature_sequences = [database_feature.Feature_sequence.upper() for database_feature in database_features]
+        # Remove restriction sites from sequence list
+        database_feature_sequences.remove('CGTCTC')
+        database_feature_sequences.remove('GGTCTC')
+
+        # Test print
+        import pprint
+        pprint.pprint(database_feature_names)
+        pprint.pprint(database_feature_sequences)
+
+        output_dictionary = {}
+
+        for user_feature in feature_dict_list:
+            # New features should be at least ~15bp long
+            if len(user_feature['feature_sequence']) < 15:
+                raise Plasmid_Exception('Features must be 15bp or longer!')
+            for database_feature in database_features:
+                # Feature names must be unique
+                if database_feature.Feature_name.lower() == user_feature['feature_name']:
+                    raise Plasmid_Exception('Feature names must be unique!')
+                # New features cannot contain other features
+                if re.search(database_feature.Feature_sequence.upper(), user_feature['feature_sequence'].upper()) != None:
+                    raise Plasmid_Exception('{0} contains a subset sequence from {1}'.format(user_feature['feature_name'], database_feature.Feature_name))
+                # Existing features cannot contain a new feature
+                if re.search(user_feature['feature_sequence'].upper(), database_feature.Feature_sequence.upper()) != None:
+                    raise Plasmid_Exception('An existing feature ({0}) contains the sequence for {1}'.format(database_feature.Feature_name, user_feature['feature_name']))
+
+                output_dictionary[user_feature['feature_name']] = user_feature['feature_sequence']
+
+        return output_dictionary
