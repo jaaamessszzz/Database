@@ -354,7 +354,7 @@ class Plasmid_Utilities(object):
             return part_sequences
 
 
-    def plasmid_checks(self, input_dict, assembly_type, part_type = None):
+    def plasmid_checks(self, input_dict, plasmid_or_assembly_type, part_type = None):
         '''
         Verifies that a plasmid conforms to modular cloning sequence standards before entry into database
 
@@ -367,7 +367,7 @@ class Plasmid_Utilities(object):
 
         #todo: write checks for other plasmids? If that exists?
 
-        if assembly_type.lower() == 'part':
+        if plasmid_or_assembly_type.lower() == 'part':
             if part_type == '1' or part_type == '5':
                 if input_dict['sequence'].count('GAGACG') != 1:
                     raise Plasmid_Exception('There should be only one reverse %s site in a Connector Part! Your part %s submission contains %s reverse %s sites.' % (
@@ -386,7 +386,7 @@ class Plasmid_Utilities(object):
                 raise Plasmid_Exception('There is more than one reverse %s site in %s! Your submission contains %s reverse %s sites.' % (
                     'BsaI', input_dict['plasmid_name'], input_dict['sequence'].count('GAGACC'), 'BsaI'))
 
-        elif assembly_type.lower() == 'cassette':
+        elif plasmid_or_assembly_type.lower() == 'cassette':
             if input_dict['sequence'].count('GGTCTC') != 0:
                 raise Plasmid_Exception('There are BsaI sites in your completed cassette assembly! This thing is going to get wrecked during the final digestion step of the Golden Gate Assembly!')
             if input_dict['sequence'].count('GAGACC') != 0:
@@ -402,7 +402,7 @@ class Plasmid_Utilities(object):
             # if input_dict['sequence'].count('GAGACG') != 2:
             #     raise Plasmid_Exception('There should only be two reverse %s sites in a cassette assembly. Your submission contains %s reverse %s sites.' % ('BsmBI', input_dict['sequence'].count('GAGACG'), 'BsmBI'))
 
-        elif assembly_type.lower() == 'multicassette':
+        elif plasmid_or_assembly_type.lower() == 'multicassette':
             # Ehhh... I'll leave this for now. There really aren't any restrictions for a multicasssette plasmid that I can think of for now
             if input_dict['sequence'].count('CGTCTC') != 0:
                 raise Plasmid_Exception('There is a forward BsmBI site in your assembled plasmid. Get rid of it!!!')
@@ -410,8 +410,9 @@ class Plasmid_Utilities(object):
                 raise Plasmid_Exception('There is a reverse BsmBI site in your assembled plasmid. Get rid of it!!!')
 
         else:
+            # todo: 'other' plasmid type designation will need to be updated, changed to 'standard' for the time being
             # This forces assembly_type to be passed correctly. Shane wrote a bug by not passing this argument in correctly.
-            assert(assembly_type.lower() == 'other')
+            assert(plasmid_or_assembly_type.lower() == 'standard')
 
 
     def add_part_plasmid_to_db(self, input_dict, part_type, auto_commit = False):
@@ -1106,6 +1107,7 @@ class Plasmid_Utilities(object):
 
         # Generate designs
         WT_sequence = plasmid_query_list[0].Plasmid.sequence.upper()
+        WT_plasmid_type = plasmid_query_list[0].Plasmid.plasmid_type
         design_intermediate = WT_sequence.upper()
 
         for feature_design in design_list:
@@ -1137,7 +1139,10 @@ class Plasmid_Utilities(object):
             existing_features_check = set(feature.Feature_sequence.upper() for feature in all_features_query)
             if feature_design['feature_design_sequence'].upper() in existing_features_check:
                 feature_already_exists = all_features_query.filter(Feature.Feature_sequence == feature_design['feature_design_sequence']).one()
-                print "Your designed feature \"{0}\" already exists in the Features database as \"{1}\"".format(feature_design['feature_design_name'], feature_already_exists.Feature_name)
+                print "Your designed feature \"{0}\" (F) already exists in the Features database as \"{1}\"".format(feature_design['feature_design_name'], feature_already_exists.Feature_name)
+            elif self.reverse_complement(feature_design['feature_design_sequence'].upper()) in existing_features_check:
+                feature_already_exists = all_features_query.filter(Feature.Feature_sequence == feature_design['feature_design_sequence']).one()
+                print "Your designed feature \"{0}\" (R) already exists in the Features database as \"{1}\"".format(feature_design['feature_design_name'], feature_already_exists.Feature_name)
             else:
                 feature_input_dict = {'Feature_name': feature_design['feature_design_name'],
                                       'Feature_type': feature_query.Feature.Feature_type,
@@ -1145,18 +1150,23 @@ class Plasmid_Utilities(object):
                                       'description': feature_design['feature_design_sequence']}
                 Feature.add(tsession, feature_input_dict)
 
+        final_designed_sequence = design_intermediate
+
         #todo: implement plasmid_checks()
+        if WT_plasmid_type == 'part':
+            pass
+        input_dict = {'sequence': final_designed_sequence,
+                      'plasmid_name': designed_plasmid_ID or ' with designed feature \"{0}\" '.format(feature_design['feature_design_name'])
+                      }
 
         ################################
         # Push things to the database
         ################################
 
-        final_designed_sequence = design_intermediate
-
         # Push plasmid
         plasmid_input_dict = {'creator': self.user_ID,
                               'plasmid_name': designed_plasmid_ID,
-                              'plasmid_type': u'design',
+                              'plasmid_type': WT_plasmid_type,
                               'location': designed_plasmid_location,
                               'description': designed_plasmid_description,
                               'sequence': final_designed_sequence,
@@ -1168,9 +1178,7 @@ class Plasmid_Utilities(object):
         #Push Design_Plasmid
         #todo: figure out how to get resistance and vector information from existing database entries...
         design_plasmid_input = {'creator_entry_number':design_Plasmid_entry.creator_entry_number,
-                                'creator': design_Plasmid_entry.creator,
-                                'resistance': u'KAN',
-                                'vector': u'TEST'}
+                                'creator': design_Plasmid_entry.creator}
         design_plasmid_input = Design_Plasmid.add(tsession, design_plasmid_input, silent=False)
 
         # Push Plasmid_Feature_Design
@@ -1262,7 +1270,7 @@ class Plasmid_Utilities(object):
         ##################################
         # Perform Checks on New Features #
         ##################################
-
+        # todo: add naming check for resistance features in the form of "[Standard Resistance Abbreviation] [Descriptor]"
         # New features should be at least ~15bp long
         if len(feature_dict['Feature_sequence']) < 15:
             raise Plasmid_Exception('Features must be 15bp or longer!')
@@ -1270,11 +1278,17 @@ class Plasmid_Utilities(object):
             # Feature names must be unique
             if database_feature.Feature_name.lower() == feature_dict['Feature_name']:
                 raise Plasmid_Exception('Feature names must be unique!')
-            # New features cannot contain other features
+            # New features cannot contain other features (F)
             if re.search(database_feature.Feature_sequence.upper(), feature_dict['Feature_sequence'].upper()) != None:
                 raise Plasmid_Exception('{0} contains a subset sequence from {1}'.format(feature_dict['Feature_name'], database_feature.Feature_name))
-            # Existing features cannot contain a new feature
+            # New features cannot contain other features (R)
+            if re.search(self.reverse_complement(database_feature.Feature_sequence.upper()), feature_dict['Feature_sequence'].upper()) != None:
+                raise Plasmid_Exception('{0} contains a subset sequence from {1}'.format(feature_dict['Feature_name'], database_feature.Feature_name))
+            # Existing features cannot contain a new feature (F)
             if re.search(feature_dict['Feature_sequence'].upper(), database_feature.Feature_sequence.upper()) != None:
+                raise Plasmid_Exception('An existing feature ({0}) contains the sequence for {1}'.format(database_feature.Feature_name, feature_dict['Feature_name']))
+            # Existing features cannot contain a new feature (R)
+            if re.search(self.reverse_complement(feature_dict['Feature_sequence'].upper()), database_feature.Feature_sequence.upper()) != None:
                 raise Plasmid_Exception('An existing feature ({0}) contains the sequence for {1}'.format(database_feature.Feature_name, feature_dict['Feature_name']))
 
         # Commit to Database
