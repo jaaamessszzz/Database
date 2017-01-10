@@ -13,12 +13,12 @@ sys.path.insert(0, '..')
 
 try:
     from db.interface import DatabaseInterface
-    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid
+    from db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid, Plasmid_Design_Ancestors, Plasmid_Design_Features
     from db.procedures import call_procedure
 except:
     # nasty hack since we are not packaging things up properly yet for external use (e.g. the website)
     from kprimers.db.interface import DatabaseInterface
-    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid
+    from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid, Plasmid_Design_Ancestors, Plasmid_Design_Features
     from kprimers.db.procedures import call_procedure
 class Plasmid_Exception(Exception): pass
 
@@ -368,7 +368,9 @@ class Plasmid_Utilities(object):
         #todo: write checks for other plasmids? If that exists?
 
         if plasmid_or_assembly_type.lower() == 'part':
-            if part_type == '1' or part_type == '5':
+            # If part plasmid contains multiple part_plasmid_parts
+            # if part_type == '1' or part_type == '5':
+            if '1' in re.split(",| ", part_type) or '5' in re.split(",| ", part_type):
                 if input_dict['sequence'].count('GAGACG') != 1:
                     raise Plasmid_Exception('There should be only one reverse %s site in a Connector Part! Your part %s submission contains %s reverse %s sites.' % (
                     'BsmBI', part_type, input_dict['sequence'].count('GAGACG'), 'BsmBI'))
@@ -1105,7 +1107,13 @@ class Plasmid_Utilities(object):
         if len(parent_plasmid_set) != 1:
             raise Plasmid_Exception('All target features need to be from the same Plasmid!')
 
-        # Generate designs
+        ####################
+        # Generate designs #
+        ####################
+
+        # Get information on parent plasmid
+        parent_creator = plasmid_query_list[0].Plasmid.creator
+        parent_creator_entry_number = plasmid_query_list[0].Plasmid.creator_entry_number
         WT_sequence = plasmid_query_list[0].Plasmid.sequence.upper()
         WT_plasmid_type = plasmid_query_list[0].Plasmid.plasmid_type
         design_intermediate = WT_sequence.upper()
@@ -1152,18 +1160,27 @@ class Plasmid_Utilities(object):
 
         final_designed_sequence = design_intermediate
 
-        #todo: implement plasmid_checks()
-        if WT_plasmid_type == 'part':
-            pass
+        # Implement plasmid_checks()
         input_dict = {'sequence': final_designed_sequence,
                       'plasmid_name': designed_plasmid_ID or ' with designed feature \"{0}\" '.format(feature_design['feature_design_name'])
                       }
 
-        ################################
-        # Push things to the database
-        ################################
+        if WT_plasmid_type == 'part':
+            plasmid_parts_query = self.tsession.query(Part_Plasmid_Part).filter(and_(
+                Part_Plasmid_Part.creator == parent_creator,
+                Part_Plasmid_Part.creator_entry_number == parent_creator_entry_number
+            ))
+            plasmid_parts_string = ', '.join([part_part.part_number for part_part in plasmid_parts_query])
 
-        # Push plasmid
+            self.plasmid_checks(input_dict, WT_plasmid_type, plasmid_parts_string)
+            print plasmid_parts_string
+        else:
+            self.plasmid_checks(input_dict, WT_plasmid_type)
+
+        ###############################
+        # Push things to the database #
+        ###############################
+
         plasmid_input_dict = {'creator': self.user_ID,
                               'plasmid_name': designed_plasmid_ID,
                               'plasmid_type': WT_plasmid_type,
@@ -1173,27 +1190,50 @@ class Plasmid_Utilities(object):
                               'status': u'designed'
                               }
 
+        #Push Design_Plasmid
         design_Plasmid_entry = Plasmid.add(tsession, plasmid_input_dict, silent=False)
 
-        #Push Design_Plasmid
-        #todo: figure out how to get resistance and vector information from existing database entries...
-        design_plasmid_input = {'creator_entry_number':design_Plasmid_entry.creator_entry_number,
-                                'creator': design_Plasmid_entry.creator}
-        design_plasmid_input = Design_Plasmid.add(tsession, design_plasmid_input, silent=False)
+        # design_plasmid_input = {'creator_entry_number':design_Plasmid_entry.creator_entry_number,
+        #                         'creator': design_Plasmid_entry.creator}
+        #
+        # design_plasmid_input = Design_Plasmid.add(tsession, design_plasmid_input, silent=False)
 
-        # Push Plasmid_Feature_Design
+        # Check if the parent plasmid was the result of a previous round of design
+        # If so, use the same common ancestor; else, set the common ancestor to the parent plasmid
+        plasmid_feature_design_query = self.tsession.query(Plasmid_Design_Ancestors).filter(
+            Plasmid_Design_Ancestors.child_creator == list(parent_plasmid_set)[0][0],
+            Plasmid_Design_Ancestors.child_creator_entry_number == list(parent_plasmid_set)[0][1]
+        )
+
+        if len(plasmid_feature_design_query) == 0:
+            plasmid_design_ancestors_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
+                                                   'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
+                                                   'child_creator': design_Plasmid_entry.creator,
+                                                   'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
+                                                   'common_ancestor_creator': design_Plasmid_entry.creator,
+                                                   'common_ancestor_creator_entry_number': design_Plasmid_entry.creator_entry_number,
+                                                   }
+            Plasmid_Design_Ancestors.add(tsession, plasmid_design_ancestors_input_dict, silent=False)
+        else:
+            plasmid_design_ancestors_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
+                                                   'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
+                                                   'child_creator': design_Plasmid_entry.creator,
+                                                   'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
+                                                   'common_ancestor_creator': list(parent_plasmid_set)[0][0],
+                                                   'common_ancestor_creator_entry_number': list(parent_plasmid_set)[0][1]
+                                                   }
+            Plasmid_Design_Ancestors.add(tsession, plasmid_design_ancestors_input_dict, silent=False)
+
+
         for feature_design in design_list:
-            feature_design_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
-                                         'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
-                                         'child_creator': design_Plasmid_entry.creator,
-                                         'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
+            feature_design_input_dict = {'design_creator': design_Plasmid_entry.creator,
+                                         'design_creator_entry_number': design_Plasmid_entry.creator_entry_number,
                                          'feature_ID': feature_design['feature_ID']
                                          }
 
-            feature_design_entry = Plasmid_Feature_Design.add(tsession, feature_design_input_dict, silent=False)
+            feature_design_entry = Plasmid_Design_Features.add(tsession, feature_design_input_dict, silent=False)
 
         self.add_features(design_Plasmid_entry)
-        # self.upload_file(design_Plasmid_entry)
         
         if auto_commit:
             tsession.commit()
