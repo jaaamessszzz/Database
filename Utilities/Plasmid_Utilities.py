@@ -1203,15 +1203,16 @@ class Plasmid_Utilities(object):
         plasmid_feature_design_query = self.tsession.query(Plasmid_Design_Ancestors).filter(
             Plasmid_Design_Ancestors.child_creator == list(parent_plasmid_set)[0][0],
             Plasmid_Design_Ancestors.child_creator_entry_number == list(parent_plasmid_set)[0][1]
-        )
+        ).first()
 
-        if len(plasmid_feature_design_query) == 0:
+        if plasmid_feature_design_query is None:
             plasmid_design_ancestors_input_dict = {'parent_creator': list(parent_plasmid_set)[0][0],
                                                    'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
                                                    'child_creator': design_Plasmid_entry.creator,
                                                    'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
-                                                   'common_ancestor_creator': design_Plasmid_entry.creator,
-                                                   'common_ancestor_creator_entry_number': design_Plasmid_entry.creator_entry_number,
+                                                   'common_ancestor_creator': list(parent_plasmid_set)[0][0],
+                                                   'common_ancestor_creator_entry_number': list(parent_plasmid_set)[0][
+                                                       1]
                                                    }
             Plasmid_Design_Ancestors.add(tsession, plasmid_design_ancestors_input_dict, silent=False)
         else:
@@ -1219,8 +1220,8 @@ class Plasmid_Utilities(object):
                                                    'parent_creator_entry_number': list(parent_plasmid_set)[0][1],
                                                    'child_creator': design_Plasmid_entry.creator,
                                                    'child_creator_entry_number': design_Plasmid_entry.creator_entry_number,
-                                                   'common_ancestor_creator': list(parent_plasmid_set)[0][0],
-                                                   'common_ancestor_creator_entry_number': list(parent_plasmid_set)[0][1]
+                                                   'common_ancestor_creator': plasmid_feature_design_query.common_ancestor_creator,
+                                                   'common_ancestor_creator_entry_number': plasmid_feature_design_query.common_ancestor_creator_entry_number,
                                                    }
             Plasmid_Design_Ancestors.add(tsession, plasmid_design_ancestors_input_dict, silent=False)
 
