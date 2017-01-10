@@ -1193,11 +1193,6 @@ class Plasmid_Utilities(object):
         #Push Design_Plasmid
         design_Plasmid_entry = Plasmid.add(tsession, plasmid_input_dict, silent=False)
 
-        # design_plasmid_input = {'creator_entry_number':design_Plasmid_entry.creator_entry_number,
-        #                         'creator': design_Plasmid_entry.creator}
-        #
-        # design_plasmid_input = Design_Plasmid.add(tsession, design_plasmid_input, silent=False)
-
         # Check if the parent plasmid was the result of a previous round of design
         # If so, use the same common ancestor; else, set the common ancestor to the parent plasmid
         plasmid_feature_design_query = self.tsession.query(Plasmid_Design_Ancestors).filter(
