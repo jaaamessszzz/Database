@@ -34,7 +34,10 @@ class DatabaseInterface(object):
 
         # Read config
         if not config_file:
-            config_file = os.path.expanduser('~/.my.cnf.json')
+            # config_file = os.path.expanduser('~/.my.cnf.json')
+            # config_file = os.path.abspath('.my.cnf.json')
+            # Temporary fix...
+            config_file = '/mnt/klabwebsite/lablocal/.my.cnf.json'
         config = json.loads(read_file(config_file))
         self.config = config
         self.echo_sql = echo_sql
