@@ -34,11 +34,11 @@ class DatabaseInterface(object):
 
         # Read config
         if not config_file:
-            # config_file = os.path.expanduser('~/.my.cnf.json')
-            # config_file = os.path.abspath('.my.cnf.json')
-            # Temporary fix...
-            config_file = '/mnt/klabwebsite/lablocal/.my.cnf.json'
-        config = json.loads(read_file(config_file))
+            config_file = os.path.expanduser('~/.my.cnf.json')
+        try:
+            config = json.loads(read_file(config_file))
+        except:
+            config = json.loads(read_file('/usr/local/turbogears/lablocal/.my.cnf.json'))
         self.config = config
         self.echo_sql = echo_sql
         self.can_email = can_email
