@@ -141,6 +141,11 @@ class Plasmid_Utilities(object):
                 if any(codon in [input_sequences[0][i:i + 3].upper() for i in range(0, len(input_sequences[0]), 3)] for codon in ['TAA', 'TAG', 'TGA']):
                     raise Plasmid_Exception('There are stop codons in your coding sequence! Please remove them!')
 
+            # Checks for BsaI or BsmBI restriction sites in parts
+            rxn_sites = ['CGTCTC', 'GGTCTC', 'GAGACC', 'GAGACG']
+            if any([rxn_site in input_sequences[0] for rxn_site in rxn_sites]):
+                raise Plasmid_Exception('There is a BsaI/BsmBI restriction site in your part. Please remove it!')
+
             part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == u'JL').filter(Plasmid.creator_entry_number == 2).one()
             sequence_upper = self.add_part_arms(input_sequences[0], part_type)
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
