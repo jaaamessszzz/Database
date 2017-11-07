@@ -35,7 +35,10 @@ class DatabaseInterface(object):
         # Read config
         if not config_file:
             config_file = os.path.expanduser('~/.my.cnf.json')
-        config = json.loads(read_file(config_file))
+        try:
+            config = json.loads(read_file(config_file))
+        except:
+            config = json.loads(read_file('/usr/local/turbogears/lablocal/.my.cnf.json'))
         self.config = config
         self.echo_sql = echo_sql
         self.can_email = can_email
