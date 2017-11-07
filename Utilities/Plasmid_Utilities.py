@@ -20,6 +20,7 @@ except:
     from kprimers.db.interface import DatabaseInterface
     from kprimers.db.model import Users, Plasmid, Primers, Part_Plasmid, Part_Plasmid_Part, Part_Type, Cassette_Assembly, Cassette_Plasmid, Cassette_Connector, Feature_Type, Feature, Plasmid_Feature, Plasmid_File, CDS_Mutant, CDS_Mutant_Constituent, Multicassette_Assembly, Multicassette_Plasmid, Publication_Plasmid, Other_Plasmid, Plasmid_Feature_Design, Design_Plasmid
     from kprimers.db.procedures import call_procedure
+
 class Plasmid_Exception(Exception): pass
 
 class Plasmid_Utilities(object):
@@ -191,7 +192,7 @@ class Plasmid_Utilities(object):
                     # '2a' : ['', ''],
                     #  '2b' : ['', ''],
                     '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'taaATCCtGAGACCtGAGACGgcat'],
-                    '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGCAGTTCTtGAGACCtGAGACGgcat'],
+                    '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGTTCTtGAGACCtGAGACGgcat'],
                     '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'taaATCCtGAGACCtGAGACGgcat'],
                     '4': ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
                     # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
