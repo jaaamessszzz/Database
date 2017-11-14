@@ -1,9 +1,9 @@
 """
-This file was written by James Lucas as part of the Kortemme Lab Plasmid Database.
+This file was written by James Lucas and Shane O'Connor as part of the Kortemme Lab Plasmid Database.
 """
-__author__ = "James Lucas"
+__author__ = "James Lucas and Shane O'Connor"
 __copyright__ = ""
-__credits__ = ["James Lucas"]
+__credits__ = ["James Lucas", "Shane O'Connor"]
 __license__ = "CC Attribution-NonCommercial 4.0 International"
 __version__ = "0.1"
 __maintainer__ = "James Lucas"
