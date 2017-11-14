@@ -1,0 +1,97 @@
+LOCUS       pJL0015_Mutant          2182 bp    DNA              UNK 01-JAN-1980
+DEFINITION  Gen9 WT Scaffold 1G2 Chain1, design chain D (Wildtype chain is
+            CALMODULIN / CAM from Kluyveromyces Lactis)
+ACCESSION   pJL0015_Mutant
+VERSION     pJL0015_Mutant
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     Origin          138..820
+                     /ApEinfo_fwdcolor="#716FB2"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="ColE1 Origin"
+                     /ApEinfo_revcolor="#716FB2"
+                     /label="ColE1 Origin"
+     Resistance      947..1606
+                     /ApEinfo_fwdcolor="#178CCB"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="CM"
+                     /ApEinfo_revcolor="#178CCB"
+                     /label="CM"
+     Restrxn_Type_II join(1720..1725,1727..1730)
+                     /ApEinfo_fwdcolor="#EC1848"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="BsaI"
+                     /ApEinfo_revcolor="#EC1848"
+                     /label="BsaI"
+     Restrxn_Type_II complement(join(2172..2175,2177..2182))
+                     /ApEinfo_fwdcolor="#EC1848"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="BsaI"
+                     /ApEinfo_revcolor="#EC1848"
+                     /label="BsaI"
+     CDS             1731..2168
+                     /ApEinfo_fwdcolor="#90BD31"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="Mutant WT 1G2 Chain 1/D"
+                     /ApEinfo_revcolor="#90BD31"
+                     /label="Mutant WT 1G2 Chain 1/D"
+     Mutation        1788..1790
+                     /ApEinfo_fwdcolor="#506380"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="D20V"
+                     /ApEinfo_revcolor="#506380"
+                     /label="D20V"
+     Mutation        1866..1868
+                     /ApEinfo_fwdcolor="#506380"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="A46K"
+                     /ApEinfo_revcolor="#506380"
+                     /label="A46K"
+     Mutation        2151..2153
+                     /ApEinfo_fwdcolor="#506380"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="A141F"
+                     /ApEinfo_revcolor="#506380"
+                     /label="A141F"
+ORIGIN
+        1 tatgcctagg gcgttcggct gcggcgagcg gtatcagctc actcaaaggc ggtaatacgg
+       61 ttatccacag aatcagggga taacgcagga aagaacatgt gagcaaaagg ccagcaaaag
+      121 gccaggaacc gtaaaaaggc cgcgttgctg gcgtttttcc ataggctccg cccccctgac
+      181 gagcatcaca aaaatcgacg ctcaagtcag aggtggcgaa acccgacagg actataaaga
+      241 taccaggcgt ttccccctgg aagctccctc gtgcgctctc ctgttccgac cctgccgctt
+      301 accggatacc tgtccgcctt tctcccttcg ggaagcgtgg cgctttctca tagctcacgc
+      361 tgtaggtatc tcagttcggt gtatgtcgtt cgctccaagc tgggctgtgt gcacgaaccc
+      421 cccgttcagc ccgaccgctg cgccttatcc ggtaactatc gtcttgagtc caacccggta
+      481 agacacgact tatcgccact ggcagcagcc actggtaaca ggattagcag agcgaggtat
+      541 gtaggcggtg ctacagagtt cttgaagtgg tggcctaact acggctacac tagaaggaca
+      601 gtatttggta tctgcgctct gctgaagcca gttaccttcg gaaaaagagt tggtagctct
+      661 tgatccggca aacaaaccac cgctggtagc ggtggttttt ttgtttgcaa gcagcagatt
+      721 acgcgcagaa aaaaaggatc tcaagaagat cctttgatct tttctacggg gtctgacgct
+      781 cagtggaacg aaaactcacg ttaagggatt ttggtcatga ctagtgcttg gattctcacc
+      841 aataaaaaac gcccggcggc aaccgagcgt tctgaacaaa tccagatgga gttctgaggt
+      901 cattactgga tctatcaaca ggagtccaag cgagctcgat atcaaattac gccccgccct
+      961 gccactcatc gcagtactgt tgtaattcat taagcattct gccgacatgg aagccatcac
+     1021 aaacggcatg atgaacctga atcgccagcg gcatcagcac cttgtcgcct tgcgtataat
+     1081 atttgcccat ggtgaaaacg ggggcgaaga agttgtccat attggccacg tttaaatcaa
+     1141 aactggtgaa actcacccag ggattggctg attcgaaaaa catattctca ataaaccctt
+     1201 tagggaaata ggccaggttt tcaccgtaac acgccacatc ttgcgaatat atgtgtagaa
+     1261 actgccggaa atcgtcgtgg tattcactcc agagcgatga aaacgtttca gtttgctcat
+     1321 ggaaaacggt gtaacaaggg tgaacactat cccatatcac cagctcaccg tctttcattg
+     1381 ccatacgaaa ttccggatga gcattcatca ggcgggcaag aatgtgaata aaggccggat
+     1441 aaaacttgtg cttatttttc tttacggtct ttaaaaaggc cgtaatatcc agctgaacgg
+     1501 tctggttata ggtacattga gcaactgact gaaatgcctc aaaatgttct ttacgatgcc
+     1561 attgggatat atcaacggtg gtatatccag tgattttttt ctccatttta gcttccttag
+     1621 ctcctgaaaa tctcgataac tcaaaaaata cgcccggtag tgatcttatt tcattatggt
+     1681 gaaagttgga acctcttacg tgccgatcaa caacgagcag gtctcattct tcgcagaatt
+     1741 taacagagga acaaattgca gaattcaaag aggcatttgc cttgttcgtg aaggataata
+     1801 gcggctccat ttctgctagt gagttggcta ccgtgatgag atctttgggt ctttcgccca
+     1861 gtgaaaaaga agttgctgac ttgatgaacg aaattgatgt tgatggtaac catgccattg
+     1921 aattcagtga gtttttagcg ttaatgtcca gacaattgaa gtgtaacgat tcggaacaag
+     1981 agttgttgga agctttcaag gtgtttgata agaacgggga tggtttgatc tctgctgcag
+     2041 agttgaaaca tgttttgacg tcgattggtg aaaaattgac cgatgcggaa gtcgatgaaa
+     2101 tgttgagaga agttagcgat ggctcgggtg aaattaacat caaacaattt tttgcccttc
+     2161 tatccaaata aatcctgaga cc
+//

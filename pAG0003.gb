@@ -1,0 +1,70 @@
+LOCUS       pAG0003                 2069 bp    DNA              UNK 01-JAN-1980
+DEFINITION  2promoter_T7 part plasmid
+ACCESSION   pAG0003
+VERSION     pAG0003
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     Operator        1993..2015
+                     /ApEinfo_fwdcolor="#FFDD00"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="Lac Operon"
+                     /ApEinfo_revcolor="#FFDD00"
+                     /label="Lac Operon"
+     Promoter        1974..1992
+                     /ApEinfo_fwdcolor="#F48024"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="T7 Promoter"
+                     /ApEinfo_revcolor="#F48024"
+                     /label="T7 Promoter"
+     Restrxn_Type_II join(1721..1726,1728..1731)
+                     /ApEinfo_fwdcolor="#EC1848"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="BsaI"
+                     /ApEinfo_revcolor="#EC1848"
+                     /label="BsaI"
+     Restrxn_Type_II complement(join(2059..2062,2064..2069))
+                     /ApEinfo_fwdcolor="#EC1848"
+                     /ApEinfo_graphicformat="arrow_data {{0 1 2 0 0 -1} {} 0}"
+                     /ApEinfo_label="BsaI"
+                     /ApEinfo_revcolor="#EC1848"
+                     /label="BsaI"
+ORIGIN
+        1 tatgcctagg gcgttcggct gcggcgagcg gtatcagctc actcaaaggc ggtaatacgg
+       61 ttatccacag aatcagggga taacgcagga aagaacatgt gagcaaaagg ccagcaaaag
+      121 gccaggaacc gtaaaaaggc cgcgttgctg gcgtttttcc ataggctccg cccccctgac
+      181 gagcatcaca aaaatcgacg ctcaagtcag aggtggcgaa acccgacagg actataaaga
+      241 taccaggcgt ttccccctgg aagctccctc gtgcgctctc ctgttccgac cctgccgctt
+      301 accggatacc tgtccgcctt tctcccttcg ggaagcgtgg cgctttctca atgctcacgc
+      361 tgtaggtatc tcagttcggt gtaggtcgtt cgctccaagc tgggctgtgt gcacgaaccc
+      421 cccgttcagc ccgaccgctg cgccttatcc ggtaactatc gtcttgagtc caacccggta
+      481 agacacgact tatcgccact ggcagcagcc actggtaaca ggattagcag agcgaggtat
+      541 gtaggcggtg ctacagagtt cttgaagtgg tggcctaact acggctacac tagaaggaca
+      601 gtatttggta tctgcgctct gctgaagcca gttaccttcg gaaaaagagt tggtagctct
+      661 tgatccggca aacaaaccac cgctggtagc ggtggttttt ttgtttgcaa gcagcagatt
+      721 acgcgcagaa aaaaaggatc tcaagaagat cctttgatct tttctacggg gtctgacgct
+      781 cagtggaacg aaaactcacg ttaagggatt ttggtcatga ctagtgcttg gattctcacc
+      841 aataaaaaac gcccggcggc aaccgagcgt tctgaacaaa tccagatgga gttctgaggt
+      901 cattactgga tctatcaaca ggagtccaag cgagctcgat atcaaattac gccccgccct
+      961 gccactcatc gcagtactgt tgtaattcat taagcattct gccgacatgg aagccatcac
+     1021 agacggcatg atgaacctga atcgccagcg gcatcagcac cttgtcgcct tgcgtataat
+     1081 atttgcccat ggtgaaaacg ggggcgaaga agttgtccat attggccacg tttaaatcaa
+     1141 aactggtgaa actcacccag ggattggctg agacgaaaaa catattctca ataaaccctt
+     1201 tagggaaata ggccaggttt tcaccgtaac acgccacatc ttgcgaatat atgtgtagaa
+     1261 actgccggaa atcgtcgtgg tattcactcc agagcgatga aaacgtttca gtttgctcat
+     1321 ggaaaacggt gtaacaaggg tgaacactat cccatatcac cagctcaccg tctttcattg
+     1381 ccatacgaaa ttccggatga gcattcatca ggcgggcaag aatgtgaata aaggccggat
+     1441 aaaacttgtg cttatttttc tttacggtct ttaaaaaggc cgtaatatcc agctgaacgg
+     1501 tctggttata ggtacattga gcaactgact gaaatgcctc aaaatgttct ttacgatgcc
+     1561 attgggatat atcaacggtg gtatatccag tgattttttt ctccatttta gcttccttag
+     1621 ctccctgccc atctcgataa ctcaaaaaat acgccctgta gtgatcttat ttcattatgg
+     1681 tgaaagttgg aacctcttac gtgccgatca acaacgagca ggtctcgaac gcgttgagca
+     1741 ccgccgccgc aaggaatggt gcatgcaagg agatggcgcc caacagtccc ccggccacgg
+     1801 ggcctgccac catacccacg ccgaaacaag cgctcatgag cccgaagtgg cgagcccgat
+     1861 cttccccatc ggtgatgtcg gcgatatagg cgccagcaac cgcacctgtg gcgccggtga
+     1921 tgccggccac gatgcgtccg gcgtagagga tcgagatctc gatcccgcga aattaatacg
+     1981 actcactata ggggaattgt gagcggataa caattcccct ctagaaataa ttttgtttaa
+     2041 ctttaagaag gagatatata tgtgagacc
+//

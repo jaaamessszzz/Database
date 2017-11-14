@@ -1,3 +1,15 @@
+"""
+This file was written by James Lucas as part of the Kortemme Lab Plasmid Database.
+"""
+__author__ = "James Lucas"
+__copyright__ = ""
+__credits__ = ["James Lucas"]
+__license__ = "CC Attribution-NonCommercial 4.0 International"
+__version__ = "0.1"
+__maintainer__ = "James Lucas"
+__email__ = "james.lucas@berkeley.edu"
+__status__ = "Development"
+
 import sys
 import StringIO
 import re
