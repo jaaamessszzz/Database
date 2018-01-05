@@ -159,7 +159,12 @@ class Plasmid_Utilities(object):
             if any([rxn_site in input_sequences[0] for rxn_site in rxn_sites]):
                 raise Plasmid_Exception('There is a BsaI/BsmBI restriction site in your part. Please remove it!')
 
-            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == u'JL').filter(Plasmid.creator_entry_number == 2).one()
+            # --- Use Anum's part entry plasmid --- #
+            # part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == u'JL').filter(Plasmid.creator_entry_number == 2).one()
+
+            # --- Use Dueber YTK part entry plasmid (pTMP139 || pYTK001) --- #
+            part_entry_vector = self.tsession.query(Plasmid).filter(Plasmid.creator == u'JL').filter(Plasmid.creator_entry_number == 1).one()
+
             sequence_upper = self.add_part_arms(input_sequences[0], part_type)
             table_info['Part list'].append(sequence_upper[ sequence_upper.find('CGTCTC') + 7 : sequence_upper.find('GAGACG') - 1])
             intermediate = part_entry_vector.sequence[ : (part_entry_vector.sequence.upper().find('GAGACG') - 1) ]
@@ -208,9 +213,13 @@ class Plasmid_Utilities(object):
                     '2': ['gcatCGTCTCaAGCAGGTCTCAAACG', 'TATGtGAGACCtGAGACGgcat'],
                     # '2a' : ['', ''],
                     #  '2b' : ['', ''],
-                    '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'taaATCCtGAGACCtGAGACGgcat'],
-                    '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGTTCTtGAGACCtGAGACGgcat'],
-                    '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'taaATCCtGAGACCtGAGACGgcat'],
+                    # Anum part entry plasmid overhangs.
+                    # '3': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'taaATCCtGAGACCtGAGACGgcat'],
+                    # '3a': ['gcatCGTCTCaAGCAGGTCTCaTATG', 'GGTAGCGGCAGCGGTTCTtGAGACCtGAGACGgcat'],
+                    # '3b': ['gcatCGTCTCaAGCAGGTCTCATTCT', 'taaATCCtGAGACCtGAGACGgcat'],
+                    '3': ['GCATCGTCTCATCGGTCTCATATG', 'GGATCCTGAGACCTGAGACGGCAT'],
+                    '3a': ['GCATCGTCTCATCGGTCTCATATG', 'GGTTCTTGAGACCTGAGACGGCAT'],
+                    '3b': ['GCATCGTCTCATCGGTCTCATTCT', 'GGATCCTGAGACCTGAGACGGCAT'],
                     '4': ['gcatCGTCTCaAGCAGGTCTCaATCC', 'GCTGtGAGACCtGAGACGgcat'],
                     # '4a' : ['gcatCGTCTCaAGCAGGTCTCaATCC', ''],
                     #  '4b' : ['', 'GCTGtGAGACCtGAGACGgcat'],
